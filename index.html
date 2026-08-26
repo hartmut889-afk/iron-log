@@ -1,0 +1,1826 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>鐵日誌</title>
+<meta name="description" content="個人健身課表與訓練紀錄：規劃每日訓練、記錄最大重量與組數，內建 40 個動作的圖示、出力方向與動作要領。">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#F1EEE7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141412" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="鐵日誌">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+<style>
+/* ── reset (Artifact 版本由平台提供，獨立網頁要自己補) ── */
+html,body{margin:0;padding:0}
+img,svg{max-width:100%}
+/* ── tokens: dark-first ─────────────────────────────── */
+:root{
+  color-scheme: dark light;
+  --bg:#141412; --bg2:#1B1A17; --surface:#211F1C; --raised:#2A2723; --sunken:#0F0E0C;
+  --line:#332F2A; --line2:#453F36;
+  --text:#EFEBE3; --text2:#B2AA9E; --text3:#7B7466;
+  --accent:#E5A44C; --accent2:#F1C489; --accentDim:rgba(229,164,76,.15);
+  --ok:#8BAE68; --okDim:rgba(139,174,104,.16);
+  --fig:#463F37; --figLine:#5C5347;
+  --shadow:0 20px 50px rgba(0,0,0,.55);
+  --scrim:rgba(8,7,6,.66);
+  --warnBg:#3A2118; --warnLine:#5A3323; --warnText:#F0A98C;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#F1EEE7; --bg2:#E9E5DC; --surface:#FFFFFF; --raised:#F8F5EF; --sunken:#E4DFD5;
+    --line:#DFD8CB; --line2:#CBC2B2;
+    --text:#221E18; --text2:#5C554A; --text3:#8A8174;
+    --accent:#A96712; --accent2:#8A530C; --accentDim:rgba(169,103,18,.11);
+    --ok:#587B39; --okDim:rgba(88,123,57,.12);
+    --fig:#D3CCBE; --figLine:#B0A695;
+    --shadow:0 18px 44px rgba(70,58,40,.16);
+    --scrim:rgba(60,52,40,.42);
+    --warnBg:#FBE7DC; --warnLine:#E9C3AF; --warnText:#8E3B18;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F1EEE7; --bg2:#E9E5DC; --surface:#FFFFFF; --raised:#F8F5EF; --sunken:#E4DFD5;
+  --line:#DFD8CB; --line2:#CBC2B2;
+  --text:#221E18; --text2:#5C554A; --text3:#8A8174;
+  --accent:#A96712; --accent2:#8A530C; --accentDim:rgba(169,103,18,.11);
+  --ok:#587B39; --okDim:rgba(88,123,57,.12);
+  --fig:#D3CCBE; --figLine:#B0A695;
+  --shadow:0 18px 44px rgba(70,58,40,.16);
+  --scrim:rgba(60,52,40,.42);
+  --warnBg:#FBE7DC; --warnLine:#E9C3AF; --warnText:#8E3B18;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Hiragino Sans TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:15px; line-height:1.55; overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+:where(button,input,select,textarea){font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+::selection{background:var(--accentDim)}
+
+.serif{font-family:"Songti TC","Noto Serif TC","Source Han Serif TC",Georgia,"Times New Roman",serif}
+.num{font-family:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.lbl{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);font-weight:600}
+
+/* ── shell ───────────────────────────────────────────── */
+#app{max-width:520px;margin:0 auto;min-height:100dvh;background:var(--bg);position:relative;
+  padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line);
+  padding-top:env(safe-area-inset-top)}
+
+/* 保存失敗警告：寧可吵，也不要安靜地弄丟資料 */
+.warn[hidden]{display:none}
+.warn{display:flex;align-items:center;gap:10px;padding:9px 16px 10px;
+  background:var(--warnBg);border-bottom:1px solid var(--warnLine);color:var(--warnText)}
+.warn svg{flex:none}
+.warn .wt{flex:1;min-width:0;font-size:12.5px;line-height:1.45}
+.warn .wt b{display:block;font-size:13.5px;font-weight:700;letter-spacing:.01em}
+.warn .wt span{color:var(--warnText);opacity:.82}
+.warn button{flex:none;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;
+  border:1px solid currentColor;color:inherit}
+.warn button:hover{background:rgba(255,255,255,.1)}
+.topbar::after{content:"";position:absolute;left:0;right:0;bottom:-14px;height:14px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
+.tbrow{display:flex;align-items:center;gap:10px;padding:12px 16px 6px}
+.month{font-size:17px;font-weight:600;letter-spacing:.01em}
+.month small{color:var(--text3);font-weight:500;font-size:12px;margin-left:6px;letter-spacing:.06em}
+.tbspace{flex:1}
+.iconbtn{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;color:var(--text2);border:1px solid transparent}
+.iconbtn:hover{background:var(--raised);color:var(--text)}
+.todaybtn{font-size:12px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid var(--line2);color:var(--text2)}
+.todaybtn:hover{color:var(--accent);border-color:var(--accent)}
+
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:2px 10px 10px}
+.day{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 8px;border-radius:12px;border:1px solid transparent;transition:background .14s}
+.day .wd{font-size:10px;color:var(--text3);letter-spacing:.06em}
+.day .dd{font-size:16px;font-weight:600;line-height:1.1}
+.day .dot{width:4px;height:4px;border-radius:99px;background:var(--text3);margin-top:1px}
+.day .dot.full{background:var(--ok)}
+.day .dot.none{background:transparent}
+.day:hover{background:var(--bg2)}
+.day.today .dd{color:var(--accent)}
+.day.sel{background:var(--surface);border-color:var(--line2)}
+.day.sel .dd{color:var(--text)}
+.day.sel.today .dd{color:var(--accent)}
+.day.sel::after{content:"";position:absolute;left:50%;translate:-50% 0;bottom:-1px;width:18px;height:2px;border-radius:2px;background:var(--accent)}
+
+/* ── day header ──────────────────────────────────────── */
+main{padding:18px 16px 0;animation:slidein .22s ease}
+@keyframes slidein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.dayhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.dayttl{font-size:27px;line-height:1.12;letter-spacing:.01em}
+.dayttl .wk{display:block;font-size:11.5px;letter-spacing:.22em;color:var(--text3);font-family:inherit;margin-bottom:5px}
+.focus{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:46%}
+.ptag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;white-space:nowrap}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);margin-bottom:18px}
+.stat{padding:11px 12px 12px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat .v{font-size:19px;font-weight:600;line-height:1.15}
+.stat .v em{font-style:normal;font-size:11px;color:var(--text3);margin-left:2px;font-weight:500}
+.stat .k{font-size:10.5px;color:var(--text3);letter-spacing:.1em;margin-top:2px}
+.stat.done .v{color:var(--ok)}
+
+/* ── cards ───────────────────────────────────────────── */
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;
+  background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:11px 13px 11px 9px;text-align:left;width:100%;transition:border-color .15s,transform .1s}
+.card:hover{border-color:var(--line2)}
+.card:active{transform:scale(.994)}
+.card.complete{border-color:color-mix(in srgb,var(--ok) 42%,var(--line))}
+.thumb{width:56px;height:74px;border-radius:11px;background:var(--sunken);display:grid;place-items:center;position:relative;overflow:hidden;border:1px solid var(--line)}
+.thumb svg{width:100%;height:100%;display:block}
+.thumb .mag{position:absolute;right:3px;bottom:3px;font-size:9px;color:var(--text3);background:var(--surface);border-radius:5px;padding:0 3px;line-height:13px}
+.cbody{min-width:0}
+.cname{font-size:15.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmeta{display:flex;align-items:center;gap:7px;margin-top:3px;flex-wrap:wrap}
+.cdot{width:6px;height:6px;border-radius:99px;flex:none}
+.cequip{font-size:11.5px;color:var(--text3)}
+.cscheme{margin-top:6px;font-size:13px;color:var(--text2)}
+.cscheme b{color:var(--text);font-weight:600}
+.ring{width:38px;height:38px;flex:none}
+.ring text{font-size:11px;font-weight:700;fill:var(--text2)}
+.ring.done text{fill:var(--ok)}
+
+.empty{border:1px dashed var(--line2);border-radius:16px;padding:30px 22px;text-align:center;background:var(--bg2)}
+.empty h3{margin:0 0 6px;font-size:17px;font-weight:600}
+.empty p{margin:0 0 16px;color:var(--text3);font-size:13px;line-height:1.7}
+.empty .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+
+.btn{border:1px solid var(--line2);border-radius:10px;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--text);transition:background .14s,border-color .14s}
+.btn:hover{background:var(--raised)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#17130C}
+.btn.pri:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn.gho{border-color:transparent;color:var(--text3)}
+.btn.gho:hover{color:var(--text);background:var(--raised)}
+.btn.dgr{color:#D2705E;border-color:transparent}
+.btn.dgr:hover{background:rgba(210,112,94,.12)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+.dayfoot{display:flex;gap:8px;margin:16px 0 4px;flex-wrap:wrap}
+
+/* ── FAB ─────────────────────────────────────────────── */
+.fabwrap{position:fixed;right:max(16px,calc(50vw - 244px));z-index:40;display:flex;flex-direction:column;align-items:flex-end;gap:9px;
+  bottom:max(22px,calc(env(safe-area-inset-bottom) + 14px))}
+.fab{width:56px;height:56px;border-radius:19px;background:var(--accent);color:#17130C;display:grid;place-items:center;box-shadow:var(--shadow);transition:transform .18s cubic-bezier(.34,1.4,.5,1)}
+.fab:hover{transform:translateY(-2px)}
+.fab svg{transition:rotate .2s}
+.fabwrap.open .fab svg{rotate:135deg}
+.mini{display:flex;align-items:center;gap:9px;opacity:0;pointer-events:none;transform:translateY(8px) scale(.95);transition:all .18s}
+.fabwrap.open .mini{opacity:1;pointer-events:auto;transform:none}
+.fabwrap.open .mini:nth-child(1){transition-delay:.05s}
+.mini span{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow);white-space:nowrap}
+.mini i{width:40px;height:40px;border-radius:13px;background:var(--surface);border:1px solid var(--line2);display:grid;place-items:center;box-shadow:var(--shadow);color:var(--text2)}
+.mini:hover i{color:var(--accent);border-color:var(--accent)}
+
+/* ── sheets ──────────────────────────────────────────── */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:50;opacity:0;pointer-events:none;transition:opacity .22s;backdrop-filter:blur(2px)}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:60;max-width:520px;margin:0 auto;
+  background:var(--bg2);border:1px solid var(--line2);border-bottom:0;border-radius:22px 22px 0 0;
+  max-height:92dvh;display:flex;flex-direction:column;transform:translateY(102%);transition:transform .28s cubic-bezier(.3,.9,.3,1);box-shadow:var(--shadow)}
+.sheet.on{transform:none}
+.grab{width:34px;height:4px;border-radius:99px;background:var(--line2);margin:9px auto 0;flex:none}
+.shead{display:flex;align-items:center;gap:10px;padding:10px 16px 12px;border-bottom:1px solid var(--line);flex:none}
+.shead h2{margin:0;font-size:17px;font-weight:600;letter-spacing:.01em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbody{overflow-y:auto;overscroll-behavior:contain;padding:16px;-webkit-overflow-scrolling:touch}
+.sfoot{flex:none;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg2);display:flex;gap:8px}
+.sfoot .btn{flex:1;text-align:center;padding:11px}
+
+/* ── detail sheet ────────────────────────────────────── */
+.dtop{display:grid;grid-template-columns:96px 1fr;gap:14px;margin-bottom:18px}
+.dfig{width:96px;height:132px;border-radius:13px;background:var(--sunken);border:1px solid var(--line);overflow:hidden;position:relative}
+.dfig svg{width:100%;height:100%;display:block}
+.dfig .hint{position:absolute;left:0;right:0;bottom:0;font-size:9.5px;text-align:center;color:var(--text3);background:linear-gradient(transparent,var(--sunken) 60%);padding:8px 0 3px;letter-spacing:.05em}
+.prgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;align-self:start}
+.prcell{background:var(--surface);padding:9px 11px 10px}
+.prcell .k{font-size:10px;letter-spacing:.1em;color:var(--text3)}
+.prcell .v{font-size:21px;font-weight:700;line-height:1.2;margin-top:1px}
+.prcell .v em{font-style:normal;font-size:11px;font-weight:500;color:var(--text3);margin-left:2px}
+.prcell.hi .v{color:var(--accent)}
+.lastlog{grid-column:1/-1;background:var(--surface);padding:8px 11px;font-size:12px;color:var(--text2);display:flex;gap:8px;align-items:baseline}
+.lastlog b{color:var(--text);font-weight:600}
+
+.sect{margin-top:20px}
+.sect:first-child{margin-top:0}
+.secth{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.secth .lbl{flex:none}
+.secth .rule{flex:1;height:1px;background:var(--line)}
+
+.sets{display:flex;flex-direction:column;gap:6px}
+.setrow{display:grid;grid-template-columns:26px 1fr 12px 1fr 38px 26px;gap:6px;align-items:center;
+  background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:6px 7px}
+.setrow.on{border-color:color-mix(in srgb,var(--ok) 48%,var(--line));background:var(--okDim)}
+.setno{font-size:11px;color:var(--text3);text-align:center;font-weight:600}
+.setrow.on .setno{color:var(--ok)}
+.fld{position:relative}
+.fld input{width:100%;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:7px 28px 7px 9px;font-size:15px;font-weight:600;
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;text-align:right;-moz-appearance:textfield}
+.fld input::-webkit-outer-spin-button,.fld input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.fld input:focus{border-color:var(--accent);outline:none}
+.fld u{position:absolute;right:8px;top:50%;translate:0 -50%;font-size:10px;color:var(--text3);text-decoration:none;pointer-events:none}
+.setx{text-align:center;color:var(--text3);font-size:12px}
+.chk{width:34px;height:34px;border-radius:9px;border:1px solid var(--line2);display:grid;place-items:center;color:var(--text3);justify-self:center}
+.chk:hover{border-color:var(--ok);color:var(--ok)}
+.setrow.on .chk{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.del{color:var(--text3);display:grid;place-items:center;height:30px;border-radius:7px}
+.del:hover{color:#D2705E;background:rgba(210,112,94,.1)}
+.addset{margin-top:8px;width:100%;border:1px dashed var(--line2);border-radius:11px;padding:9px;font-size:13px;font-weight:600;color:var(--text3)}
+.addset:hover{color:var(--accent);border-color:var(--accent)}
+
+.mix{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mixr{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--surface);padding:9px 12px;text-align:left;width:100%}
+.mixr:hover{background:var(--raised)}
+.mixr .g{font-size:12.5px;font-weight:600}
+.mixr .s{font-size:11.5px;color:var(--text3)}
+.mixr .w{font-size:15px;font-weight:700}
+.mixr .w em{font-style:normal;font-size:10px;color:var(--text3);font-weight:500;margin-left:2px}
+.mixnote{font-size:11.5px;color:var(--text3);margin-top:8px;line-height:1.6}
+
+.restrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{border:1px solid var(--line2);border-radius:99px;padding:5px 12px;font-size:12.5px;font-weight:600;color:var(--text2)}
+.pill.on{background:var(--accentDim);border-color:var(--accent);color:var(--accent)}
+
+/* ── intro sheet ─────────────────────────────────────── */
+.bigfig{background:var(--sunken);border:1px solid var(--line);border-radius:16px;padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.bigfig figure{margin:0;display:flex;flex-direction:column;align-items:center}
+.bigfig svg{width:100%;height:auto;max-height:250px;display:block}
+.bigfig figcaption{font-size:10px;letter-spacing:.14em;color:var(--text3);padding-bottom:5px}
+.legend{display:flex;gap:14px;justify-content:center;padding:8px 0 2px;flex-wrap:wrap}
+.legend i{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);font-style:normal}
+.legend i b{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+.force{display:flex;gap:11px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:11px;padding:11px 13px}
+.force .fdir{font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap}
+.force .fnote{font-size:13px;color:var(--text2);line-height:1.65}
+
+.mchips{display:flex;flex-wrap:wrap;gap:6px}
+.mchip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;border:1px solid var(--accent);color:var(--accent);background:var(--accentDim)}
+.mchip.sec{border-color:var(--line2);color:var(--text3);background:transparent;font-weight:500}
+
+ol.cues{margin:0;padding:0;list-style:none;counter-reset:c;display:flex;flex-direction:column;gap:9px}
+ol.cues li{counter-increment:c;display:grid;grid-template-columns:20px 1fr;gap:10px;font-size:13.5px;line-height:1.7;color:var(--text2)}
+ol.cues li::before{content:counter(c,decimal-leading-zero);font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--accent);padding-top:4px;font-weight:700}
+ul.bad{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+ul.bad li{display:grid;grid-template-columns:14px 1fr;gap:10px;font-size:13px;line-height:1.65;color:var(--text2)}
+ul.bad li::before{content:"×";color:#D2705E;font-weight:700;text-align:center;padding-top:1px}
+.breath{font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 13px;line-height:1.65}
+
+/* ── library ─────────────────────────────────────────── */
+.search{width:100%;background:var(--sunken);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:14px}
+.search:focus{border-color:var(--accent);outline:none}
+.filters{display:flex;gap:6px;overflow-x:auto;padding:11px 0 3px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters .pill{flex:none}
+.exlist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.exrow{display:grid;grid-template-columns:46px 1fr 24px;gap:11px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:7px 10px 7px 7px;text-align:left;width:100%}
+.exrow:hover{border-color:var(--line2)}
+.exrow.sel{border-color:var(--accent);background:var(--accentDim)}
+.exthumb{width:46px;height:62px;border-radius:9px;background:var(--sunken);overflow:hidden;border:1px solid var(--line)}
+.exthumb svg{width:100%;height:100%;display:block}
+.exrow .n{font-size:14.5px;font-weight:600}
+.exrow .m{font-size:11px;color:var(--text3);margin-top:1px;display:flex;align-items:center;gap:6px}
+.tick{width:22px;height:22px;border-radius:7px;border:1px solid var(--line2);display:grid;place-items:center;color:transparent}
+.exrow.sel .tick{background:var(--accent);border-color:var(--accent);color:#17130C}
+.nores{text-align:center;color:var(--text3);font-size:13px;padding:26px 0}
+
+/* ── list rows (templates / copy / settings) ─────────── */
+.rows{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px;text-align:left;width:100%}
+.row:hover{border-color:var(--line2)}
+.row .g{flex:1;min-width:0}
+.row .t{font-size:14.5px;font-weight:600}
+.row .s{font-size:11.5px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .act{flex:none;color:var(--text3)}
+.row .act:hover{color:#D2705E}
+.swatch{width:8px;align-self:stretch;border-radius:99px;flex:none;min-height:30px}
+.hintbox{font-size:12px;color:var(--text3);line-height:1.75;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-top:12px}
+.backup{width:100%;min-height:120px;background:var(--sunken);border:1px solid var(--line);border-radius:11px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:11px;resize:vertical;margin-top:8px}
+
+.toast{position:fixed;left:50%;bottom:96px;translate:-50% 0;z-index:80;background:var(--raised);border:1px solid var(--line2);
+  border-radius:11px;padding:9px 16px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,translate .2s}
+.toast.on{opacity:1;translate:-50% -6px}
+
+@media (max-width:360px){
+  .dayttl{font-size:23px}
+  .setrow{grid-template-columns:22px 1fr 10px 1fr 34px 22px;gap:4px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+
+<div id="app">
+  <header class="topbar">
+    <div class="warn" id="warn" hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span class="wt"><b id="warnTtl">資料沒有被保存</b><span id="warnWhy"></span></span>
+      <button id="warnAct">備份</button>
+    </div>
+    <div class="tbrow">
+      <div class="month serif" id="monthLbl"></div>
+      <div class="tbspace"></div>
+      <button class="todaybtn" id="btnToday" hidden>回到今天</button>
+      <button class="iconbtn" id="btnPrev" aria-label="上一週"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="iconbtn" id="btnNext" aria-label="下一週"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+      <button class="iconbtn" id="btnSettings" aria-label="設定"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h7M15 6h5M4 12h3M11 12h9M4 18h9M17 18h3"/><circle cx="13" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg></button>
+    </div>
+    <div class="week" id="week"></div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<div class="fabwrap" id="fabwrap">
+  <button class="mini" id="miniCopy"><span>複製其他日</span><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></i></button>
+  <button class="mini" id="miniTpl"><span>套用課表範本</span><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></i></button>
+  <button class="mini" id="miniLib"><span>從動作庫加入</span><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9v6M17.5 9v6M3.5 10.5v3M20.5 10.5v3M6.5 12h11"/></svg></i></button>
+  <button class="fab" id="fab" aria-label="新增動作"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="shead"><h2 id="sheetTtl"></h2><button class="iconbtn" id="sheetClose" aria-label="關閉"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="sbody" id="sheetBody"></div>
+  <div class="sfoot" id="sheetFoot" hidden></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════
+   1. 靜態資料：肌群、部位、器材、動作庫
+   ═══════════════════════════════════════════════════════ */
+const M = {
+  ch:['胸大肌','torso'], uch:['上胸','torso'], abs:['腹直肌','torso'], obl:['腹斜肌','torso'],
+  lat:['背闊肌','torso'], tra:['斜方肌','torso'], rho:['菱形肌','torso'], esp:['豎脊肌','torso'], ser:['前鋸肌','torso'],
+  del:['三角肌前束','shoulder'], sdel:['三角肌中束','shoulder'], rdel:['三角肌後束','shoulder'],
+  bic:['肱二頭肌','upperarm'], tri:['肱三頭肌','upperarm'], fore:['前臂','forearm'],
+  quad:['股四頭肌','thigh'], ham:['腿後肌','thigh'], add:['內收肌','thigh'], hipf:['髖屈肌','thigh'],
+  glu:['臀大肌','hip'], calf:['小腿','shank']
+};
+const PARTS = {
+  chest:{n:'胸',c:'#D98B45'}, back:{n:'背',c:'#5D91AA'}, legs:{n:'腿',c:'#7E9B5A'},
+  shoulders:{n:'肩',c:'#C4655C'}, arms:{n:'臂',c:'#9B7FB8'}, core:{n:'核心',c:'#C2A32E'}
+};
+const EQ = { barbell:'槓鈴', dumbbell:'啞鈴', machine:'機械／滑輪', body:'自體重' };
+
+/* 姿勢角度一律為「畫面角度」：0=下、90=右、180=上、-90=左 */
+const STAND = { torso:180, sh:[-8,8], el:[-8,8], hip:[-3,3], kn:[-2,2] };
+function P(o){ return Object.assign({}, STAND, o); }
+
+const DB = [
+/* ── 胸 ───────────────────────────────────────────── */
+{id:'bench', n:'槓鈴臥推', en:'Barbell Bench Press', part:'chest', eq:'barbell',
+ pri:['ch'], sec:['tri','del'], force:'水平推',
+ fn:'平躺後雙手把槓鈴由胸口沿垂直路徑推離身體，力量從腳掌經核心傳到手掌。',
+ cues:['肩胛先後收下壓，像把兩片肩胛骨夾進椅面','槓路落在乳頭連線上，手肘與身體約 45 度','雙腳踩實地面，臀部保持貼椅','推到頂端手肘微彈，不聳肩不甩鎖'],
+ bad:['槓落太靠近脖子，肩前側承受過大壓力','推起時臀部離椅代償','手肘完全外開成 90 度'],
+ br:'下放時吸氣撐住腹壓，推過黏著點吐氣',
+ f:{v:'front', p:P({torso:-90, sh:[176,184], el:[176,184], hip:[86,94], kn:[-3,3], dy:-4, s:.92}),
+    eq:['bench','bar'], ar:[{at:'bar',d:[0,-1],l:26}]},
+ d:[4,6,150]},
+
+{id:'inclinedb', n:'上斜啞鈴推舉', en:'Incline Dumbbell Press', part:'chest', eq:'dumbbell',
+ pri:['uch','ch'], sec:['del','tri'], force:'斜上推',
+ fn:'椅背約 30 度，雙手持啞鈴由上胸沿斜上方向推出，路徑略微向內收攏。',
+ cues:['椅背 30 度就夠，太高會變成肩推','啞鈴起始位置在鎖骨下方，不要壓到脖子','推到頂時兩個啞鈴接近但不碰撞','下放到上臂與地面平行即可'],
+ bad:['椅背角度超過 45 度，胸的參與大幅下降','肩膀往前捲，胸口沒有打開'],
+ br:'下放吸氣，推起吐氣',
+ f:{v:'front', p:P({torso:-125, sh:[172,188], el:[172,188], hip:[58,66], kn:[8,-4], dy:2, s:.86}),
+    eq:['benchInc','db'], ar:[{at:'bar',d:[.18,-1],l:24}]},
+ d:[3,10,90]},
+
+{id:'dbfly', n:'啞鈴飛鳥', en:'Dumbbell Fly', part:'chest', eq:'dumbbell',
+ pri:['ch'], sec:['del','ser'], force:'水平內收',
+ fn:'手肘固定微彎，雙臂像抱樹一樣由兩側畫弧向身體中線靠攏。',
+ cues:['手肘角度全程固定，只有肩關節在動','下放到胸口有明顯拉伸就停','用胸把手臂「合起來」，不是用手推','重量比推舉輕很多才做得對'],
+ bad:['手肘打直當槓桿，肩關節壓力暴增','下放過深造成肩前側撕扯感'],
+ br:'打開時吸氣，合攏時吐氣',
+ f:{v:'front', p:P({torso:-90, sh:[205,155], el:[212,148], hip:[86,94], kn:[-3,3], dy:-4, s:.92}),
+    eq:['bench','db'], ar:[{at:'handL',d:[.6,-.8],l:20,c:7},{at:'handR',d:[-.6,-.8],l:20,c:-7}]},
+ d:[3,12,75]},
+
+{id:'cablefly', n:'滑輪夾胸', en:'Cable Crossover', part:'chest', eq:'machine',
+ pri:['ch'], sec:['del','ser'], force:'斜下內收',
+ fn:'雙手自高位滑輪由外向內、由上往下畫弧交會於身體前方下側。',
+ cues:['上半身微微前傾，胸口打開','終點讓兩手在腹部前方交錯一點','張力全程不斷，回程要控制','站姿一腳在前會更穩'],
+ bad:['靠身體前後晃動甩重量','手肘鎖死用手臂發力'],
+ br:'回位吸氣，夾攏吐氣',
+ f:{v:'front', p:P({torso:174, sh:[-122,122], el:[-118,118], hip:[-14,7], kn:[-12,5], dy:2, s:.9}),
+    eq:['cableHigh'], ar:[{at:'handL',d:[.85,.5],l:22,c:6},{at:'handR',d:[-.85,.5],l:22,c:-6}]},
+ d:[3,15,60]},
+
+{id:'dips', n:'雙槓撐體', en:'Chest Dips', part:'chest', eq:'body',
+ pri:['ch','tri'], sec:['del'], force:'垂直推',
+ fn:'身體懸在雙槓之間，靠伸直手肘把整個體重往上推。',
+ cues:['上身前傾約 20 度會偏胸，垂直則偏三頭','下放到上臂與地面平行','肩膀壓低遠離耳朵，不要縮脖子','熟練後再加負重腰帶'],
+ bad:['下放過深造成肩關節夾擠','聳肩讓斜方肌接管動作'],
+ br:'下放吸氣，撐起吐氣',
+ f:{v:'front', p:P({torso:188, sh:[-5,7], el:[-4,6], hip:[6,-4], kn:[-42,-34], dy:-6, s:.92}),
+    eq:['dipbar'], ar:[{at:'hip',d:[0,-1],l:24}]},
+ d:[4,8,120]},
+
+{id:'pushup', n:'伏地挺身', en:'Push-up', part:'chest', eq:'body',
+ pri:['ch'], sec:['tri','del','abs'], force:'水平推',
+ fn:'身體維持一直線，用雙手把地面推開。',
+ cues:['雙手略寬於肩，指尖朝前','夾臀收腹，頭到腳跟成一直線','手肘往後 45 度，不要外開成 T 字','胸口先碰地，不是下巴先到'],
+ bad:['腰部下塌讓下背代償','屁股翹高變成折角'],
+ br:'下放吸氣，推起吐氣',
+ f:{v:'front', p:P({torso:-112, sh:[2,-2], el:[2,-2], hip:[63,63], kn:[63,63], dy:4, s:.88}),
+    eq:['floor'], ar:[{at:'shoulderR',d:[0,-1],l:22}]},
+ d:[3,15,60]},
+
+/* ── 背 ───────────────────────────────────────────── */
+{id:'deadlift', n:'槓鈴硬舉', en:'Barbell Deadlift', part:'back', eq:'barbell',
+ pri:['esp','glu','ham'], sec:['lat','tra','quad','fore'], force:'髖鉸鏈上提',
+ fn:'槓貼著小腿垂直上升，靠髖與膝同時伸直把地板「推開」。',
+ cues:['槓在腳掌中線正上方，貼著腿走','起槓前先把背繃緊、把槓「拉出鬆動」','想像把地板往下踩開，而不是往上拉','鎖定時夾臀站直，不要過度後仰'],
+ bad:['圓背起槓','屁股先抬、槓還在地上','槓離開身體形成前傾力矩'],
+ br:'起槓前吸滿氣憋住，鎖定後才吐',
+ f:{v:'back', p:P({torso:208, sh:[-5,5], el:[-5,5], hip:[-26,-20], kn:[8,4], dy:-4, s:.94}),
+    eq:['barHands'], ar:[{at:'bar',d:[0,-1],l:26},{at:'hip',d:[.4,-.92],l:20,c:5}]},
+ d:[4,5,180]},
+
+{id:'pullup', n:'引體向上', en:'Pull-up', part:'back', eq:'body',
+ pri:['lat'], sec:['bic','rho','rdel','fore'], force:'垂直拉',
+ fn:'懸吊於單槓下方，用背把身體往槓拉近，手肘沿身體兩側向下收。',
+ cues:['起始先「聳肩下壓」啟動背闊肌','想像用手肘去撞肋骨，不是用手拉','拉到下巴過槓，胸口朝槓','下放全程控制，不要自由落體'],
+ bad:['甩腿借力','肩膀完全放鬆懸掛造成關節壓力'],
+ br:'拉起吐氣，下放吸氣',
+ f:{v:'back', p:P({torso:180, sh:[-166,166], el:[-172,172], hip:[-6,6], kn:[-16,16], dy:12, s:.86}),
+    eq:['pullbar'], ar:[{at:'hip',d:[0,-1],l:24},{at:'elbowR',d:[-.2,1],l:18,c:-5}]},
+ d:[4,8,120]},
+
+{id:'latpulldown', n:'滑輪下拉', en:'Lat Pulldown', part:'back', eq:'machine',
+ pri:['lat'], sec:['bic','rho','rdel'], force:'垂直拉',
+ fn:'坐姿固定下半身，把橫桿由頭頂垂直拉向上胸。',
+ cues:['握距略寬於肩，手腕保持中立','上身後仰不超過 20 度','拉到鎖骨下方，胸口去迎接橫桿','回程讓肩胛完全上提再重新啟動'],
+ bad:['拉到頸後造成肩關節外旋壓力','靠身體大幅後躺當划船做'],
+ br:'下拉吐氣，回位吸氣',
+ f:{v:'back', p:P({torso:172, sh:[-150,150], el:[-166,166], hip:[86,94], kn:[6,-6], dy:6, s:.86}),
+    eq:['cableTop','seat'], ar:[{at:'bar',d:[0,1],l:24}]},
+ d:[4,10,90]},
+
+{id:'row', n:'槓鈴划船', en:'Barbell Row', part:'back', eq:'barbell',
+ pri:['lat','rho'], sec:['esp','bic','rdel'], force:'水平拉',
+ fn:'上身前傾約 45 度，把槓鈴由手臂垂放處拉向下腹。',
+ cues:['髖鉸鏈前傾，背維持中立不圓不塌','槓拉向肚臍到腰帶之間','頂端夾背停半秒','膝蓋微彎鎖住，不隨動作起伏'],
+ bad:['靠腰部彈震甩起重量','上身越做越直，變成聳肩'],
+ br:'拉起吐氣，下放吸氣',
+ f:{v:'back', p:P({torso:222, sh:[-4,4], el:[-4,4], hip:[-8,8], kn:[8,-8], dy:-2, s:.94}),
+    eq:['barHands'], ar:[{at:'bar',d:[.3,-.95],l:22}]},
+ d:[4,8,120]},
+
+{id:'dbrow', n:'單臂啞鈴划船', en:'One-arm Dumbbell Row', part:'back', eq:'dumbbell',
+ pri:['lat'], sec:['rho','bic','rdel','obl'], force:'水平拉',
+ fn:'單手單膝撐在椅上，另一手把啞鈴沿身體側邊拉向髖部。',
+ cues:['背部與地面接近平行','啞鈴拉向髖骨方向，不是拉向胸','頂端讓肩胛往脊椎靠攏','下放時讓肩胛完全前伸，拉出全幅度'],
+ bad:['身體旋轉甩重量','用手臂彎舉的方式把啞鈴撈起'],
+ br:'拉起吐氣，下放吸氣',
+ f:{v:'back', p:P({torso:246, sh:[-30,10], el:[-16,4], hip:[-30,10], kn:[-96,4], dy:-4, s:.86}),
+    eq:['benchLow','dbR'], ar:[{at:'handR',d:[.25,-.97],l:22}]},
+ d:[3,10,75]},
+
+{id:'cablerow', n:'坐姿滑輪划船', en:'Seated Cable Row', part:'back', eq:'machine',
+ pri:['lat','rho'], sec:['bic','rdel','esp'], force:'水平拉',
+ fn:'坐姿把握把水平拉向腹部，肩胛先動、手臂後動。',
+ cues:['胸口挺起，背不要駝','先讓肩胛往後夾，手臂才跟著收','手把碰到肚臍附近','回程讓肩胛前伸，但腰不要跟著彎'],
+ bad:['整個上身前後搖擺當划船','手臂主導，背幾乎沒感覺'],
+ br:'拉近吐氣，回位吸氣',
+ f:{v:'back', p:P({torso:172, sh:[-98,-86], el:[-94,-88], hip:[-86,-94], kn:[-20,-14], dy:2, s:.86}),
+    eq:['cableLowFront','seat'], ar:[{at:'bar',d:[1,0],l:24}]},
+ d:[3,12,75]},
+
+{id:'facepull', n:'臉拉', en:'Face Pull', part:'back', eq:'machine',
+ pri:['rdel','rho'], sec:['tra','fore'], force:'水平外旋拉',
+ fn:'把繩索由高位拉向額頭兩側，同時把雙手往外往後旋開。',
+ cues:['繩索高度略高於眼睛','拉到雙手在耳朵兩側、手肘高於肩','終點做出「比二頭肌」的姿勢','重量放輕，追求動作品質'],
+ bad:['重量太重變成滑輪划船','手肘掉到肩膀以下'],
+ br:'拉開吐氣，回位吸氣',
+ f:{v:'back', p:P({torso:180, sh:[-118,118], el:[-158,158], hip:[-4,4], kn:[-3,3], dy:0, s:.9}),
+    eq:['cableHighFront'], ar:[{at:'handL',d:[.55,-.4],l:18,c:5},{at:'handR',d:[-.55,-.4],l:18,c:-5}]},
+ d:[3,15,60]},
+
+/* ── 腿 ───────────────────────────────────────────── */
+{id:'squat', n:'槓鈴深蹲', en:'Back Squat', part:'legs', eq:'barbell',
+ pri:['quad','glu'], sec:['ham','esp','abs','add'], force:'垂直推',
+ fn:'槓置於上背，髖膝同時彎曲下沉，再靠雙腿把地板推開站起。',
+ cues:['槓放在斜方肌上緣，手肘朝下夾住槓','吸氣撐腹，全程維持腹內壓','膝蓋順著腳尖方向推開','蹲到大腿低於平行，起身時髖膝同步'],
+ bad:['膝蓋內夾','起身時屁股先衝、上身趴下','腳跟離地'],
+ br:'下蹲前吸滿憋住，過黏著點才吐氣',
+ f:{v:'front', p:P({torso:194, sh:[-142,142], el:[-160,160], hip:[-56,56], kn:[16,-16], dy:-2, s:.92}),
+    eq:['barBack'], ar:[{at:'hip',d:[0,-1],l:24},{at:'kneeR',d:[.5,-.86],l:16,c:4}]},
+ d:[4,6,180]},
+
+{id:'frontsquat', n:'前蹲舉', en:'Front Squat', part:'legs', eq:'barbell',
+ pri:['quad'], sec:['glu','abs','esp','tra'], force:'垂直推',
+ fn:'槓置於鎖骨與前三角肌上，軀幹更直立地垂直上下。',
+ cues:['手肘全程高舉指向前方','軀幹保持接近垂直','重心壓在腳掌中段','手肘一掉槓就會滑，先練架槓姿勢'],
+ bad:['手肘下沉導致上背圓','用手腕硬撐槓，應該是肩膀在架'],
+ br:'下蹲吸氣撐腹，站起吐氣',
+ f:{v:'front', p:P({torso:184, sh:[-118,118], el:[-142,142], hip:[-52,52], kn:[12,-12], dy:-2, s:.92}),
+    eq:['barFront'], ar:[{at:'hip',d:[0,-1],l:24}]},
+ d:[4,6,150]},
+
+{id:'rdl', n:'羅馬尼亞硬舉', en:'Romanian Deadlift', part:'legs', eq:'barbell',
+ pri:['ham','glu'], sec:['esp','lat','fore'], force:'髖鉸鏈',
+ fn:'膝蓋角度幾乎固定，靠髖關節後推讓槓沿大腿滑下再站直。',
+ cues:['把屁股往後推去頂牆，不是往下蹲','槓全程貼著大腿','下到腿後有明顯拉伸就回','站直時夾臀，不要過度後仰'],
+ bad:['當成深蹲彎膝蓋','背部彎曲讓下背扛住重量'],
+ br:'下放吸氣，站起吐氣',
+ f:{v:'front', p:P({torso:226, sh:[-6,6], el:[-6,6], hip:[-12,12], kn:[2,-2], dy:-2, s:.94}),
+    eq:['barHands'], ar:[{at:'hip',d:[.9,-.44],l:22,c:6}]},
+ d:[3,10,120]},
+
+{id:'legpress', n:'腿推', en:'Leg Press', part:'legs', eq:'machine',
+ pri:['quad','glu'], sec:['ham','add'], force:'斜上推',
+ fn:'背貼椅墊，雙腳把載重踏板沿軌道推離身體。',
+ cues:['腳掌與肩同寬置於踏板中段','下放到膝蓋約 90 度，腰不離墊','用整個腳掌推，不是只用腳尖','頂端膝蓋不鎖死'],
+ bad:['下放過深導致骨盆後傾、腰椎離墊','膝蓋內夾'],
+ br:'下放吸氣，推出吐氣',
+ f:{v:'front', p:P({torso:-146, sh:[40,50], el:[46,56], hip:[104,110], kn:[100,106], dy:14, s:.84}),
+    eq:['pressSeat','plate'], ar:[{at:'footR',d:[.86,-.5],l:22}]},
+ d:[4,10,120]},
+
+{id:'bss', n:'保加利亞分腿蹲', en:'Bulgarian Split Squat', part:'legs', eq:'dumbbell',
+ pri:['quad','glu'], sec:['ham','add','abs'], force:'單腳垂直推',
+ fn:'後腳墊高，重心放在前腳，用單腿完成蹲起。',
+ cues:['前腳距離椅子約一大步','身體微前傾偏臀、直立偏股四頭','後腳只負責平衡，不出力','前腳膝蓋順著腳尖方向'],
+ bad:['站距太短，膝蓋壓力過大','重心跑到後腳'],
+ br:'下蹲吸氣，起身吐氣',
+ f:{v:'front', p:P({torso:182, sh:[-9,9], el:[-9,9], hip:[-44,34], kn:[10,86], dy:-4, s:.88}),
+    eq:['benchBack','db'], ar:[{at:'hip',d:[0,-1],l:22}]},
+ d:[3,10,90]},
+
+{id:'lunge', n:'弓步蹲', en:'Walking Lunge', part:'legs', eq:'dumbbell',
+ pri:['quad','glu'], sec:['ham','add','calf','abs'], force:'單腳推進',
+ fn:'向前跨一大步下沉，再用前腳把身體推起接續下一步。',
+ cues:['跨步後前後腳都接近 90 度','上身保持直立，眼睛看前方','後膝輕觸地面即可，不要撞','用前腳跟推地起身'],
+ bad:['步距太小讓膝蓋超過腳尖過多','左右晃動失去平衡'],
+ br:'下沉吸氣，推起吐氣',
+ f:{v:'front', p:P({torso:180, sh:[-8,8], el:[-8,8], hip:[-38,40], kn:[24,102], dy:-4, s:.88}),
+    eq:['db'], ar:[{at:'hip',d:[.3,-.95],l:22}]},
+ d:[3,12,90]},
+
+{id:'legext', n:'腿伸屈', en:'Leg Extension', part:'legs', eq:'machine',
+ pri:['quad'], sec:[], force:'膝伸直',
+ fn:'坐姿固定大腿，只靠膝關節伸直把腳墊往前抬起。',
+ cues:['膝關節對齊機器轉軸','頂端停一拍，主動收緊股四頭','下放控制到底，不要讓重量砸回','腰貼椅背，不要拱起'],
+ bad:['靠身體後仰甩重量','速度太快讓膝關節承受衝擊'],
+ br:'抬起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:176, sh:[-18,18], el:[-8,8], hip:[86,94], kn:[60,66], dy:6, s:.86}),
+    eq:['seatBack','pad'], ar:[{at:'footR',d:[.9,-.44],l:20,c:5}]},
+ d:[3,15,60]},
+
+{id:'calfraise', n:'站姿提踵', en:'Standing Calf Raise', part:'legs', eq:'machine',
+ pri:['calf'], sec:[], force:'踝關節蹠屈',
+ fn:'前腳掌踩在墊高處，靠小腿把身體整個往上頂。',
+ cues:['腳跟先下沉到最低再往上頂','頂端停 1 秒完全收縮','膝蓋保持微伸直不彈跳','慢下快上，動作幅度要滿'],
+ bad:['彈震式快速上下，靠肌腱反彈','幅度過小只做中段'],
+ br:'頂起吐氣，下沉吸氣',
+ f:{v:'back', p:P({torso:180, sh:[-8,8], el:[-8,8], hip:[-3,3], kn:[-2,2], dy:-8, s:.94}),
+    eq:['step'], ar:[{at:'hip',d:[0,-1],l:20},{at:'footR',d:[0,-1],l:14}]},
+ d:[4,15,45]},
+
+/* ── 肩 ───────────────────────────────────────────── */
+{id:'ohp', n:'站姿肩推', en:'Overhead Press', part:'shoulders', eq:'barbell',
+ pri:['del','sdel'], sec:['tri','tra','abs'], force:'垂直推',
+ fn:'站姿把槓由鎖骨推過頭頂，收尾時頭穿過雙臂之間。',
+ cues:['夾臀收腹，肋骨不外翻','槓貼著臉往上，過額頭後頭往前穿','鎖定時耳朵在手臂前方','手腕保持中立，不要後折'],
+ bad:['腰過度後仰變成上斜臥推','槓路繞開臉造成前傾力矩'],
+ br:'推起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-172,172], el:[-176,176], hip:[-3,3], kn:[-2,2], dy:8, s:.86}),
+    eq:['barHands'], ar:[{at:'bar',d:[0,-1],l:22}]},
+ d:[4,6,150]},
+
+{id:'dbpress', n:'坐姿啞鈴肩推', en:'Seated Dumbbell Press', part:'shoulders', eq:'dumbbell',
+ pri:['del','sdel'], sec:['tri','tra'], force:'垂直推',
+ fn:'坐姿背靠椅墊，雙手持啞鈴由耳側推至頭頂上方。',
+ cues:['起始位置手肘略在身體前方，不要完全外開','推起時啞鈴軌跡略向內收攏','下放到手肘與肩同高','腰貼椅背，不要拱腰借力'],
+ bad:['手肘完全打開成一直線，肩關節壓力大','下放過深造成肩夾擠'],
+ br:'推起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-168,168], el:[-178,178], hip:[86,94], kn:[6,-6], dy:8, s:.84}),
+    eq:['seatBack','db'], ar:[{at:'bar',d:[0,-1],l:22}]},
+ d:[3,10,90]},
+
+{id:'lateral', n:'側平舉', en:'Lateral Raise', part:'shoulders', eq:'dumbbell',
+ pri:['sdel'], sec:['tra','del'], force:'肩外展',
+ fn:'手臂由身側沿冠狀面向外抬起到與肩同高。',
+ cues:['手肘微彎並全程固定','想像用手肘帶動，不是用手掌','抬到與肩同高就停，不要過肩','下放放慢 2–3 秒'],
+ bad:['聳肩讓斜方肌接手','靠身體晃動把啞鈴甩起來'],
+ br:'抬起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-96,96], el:[-100,100], hip:[-3,3], kn:[-2,2], dy:0, s:.92}),
+    eq:['db'], ar:[{at:'handL',d:[-.15,-1],l:18,c:-5},{at:'handR',d:[.15,-1],l:18,c:5}]},
+ d:[4,15,45]},
+
+{id:'frontraise', n:'前平舉', en:'Front Raise', part:'shoulders', eq:'dumbbell',
+ pri:['del'], sec:['uch','tra'], force:'肩屈曲',
+ fn:'手臂由大腿前方沿矢狀面向前抬起到肩高。',
+ cues:['手肘微彎，掌心朝下或相對皆可','抬到與肩同高即可','核心收緊，避免身體後仰','單手交替可以更專注'],
+ bad:['借腰部後仰甩起重量','抬過頭讓斜方肌主導'],
+ br:'抬起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-8,80], el:[-8,84], hip:[-3,3], kn:[-2,2], dy:0, s:.86}),
+    eq:['db'], ar:[{at:'handR',d:[.2,-.98],l:20,c:9}]},
+ d:[3,12,45]},
+
+{id:'reardelt', n:'反向飛鳥', en:'Rear Delt Fly', part:'shoulders', eq:'dumbbell',
+ pri:['rdel'], sec:['rho','tra'], force:'水平外展',
+ fn:'上身前傾接近水平，雙臂由下往兩側後方畫弧張開。',
+ cues:['上身前傾到接近平行地面','手肘微彎固定，只有肩在動','想像把兩片肩胛骨往外拉開，不是往中間夾','重量務必放輕'],
+ bad:['用背闊肌做成划船','脖子往上抬造成頸部緊繃'],
+ br:'張開吐氣，回位吸氣',
+ f:{v:'back', p:P({torso:242, sh:[-96,96], el:[-100,100], hip:[-6,6], kn:[10,-10], dy:-2, s:.9}),
+    eq:['db'], ar:[{at:'handL',d:[-.4,-.92],l:18,c:-6},{at:'handR',d:[.4,-.92],l:18,c:6}]},
+ d:[3,15,45]},
+
+{id:'shrug', n:'聳肩', en:'Barbell Shrug', part:'shoulders', eq:'barbell',
+ pri:['tra'], sec:['rho','fore'], force:'肩胛上提',
+ fn:'手臂當掛鉤，只靠斜方肌把肩膀垂直往耳朵方向提起。',
+ cues:['手肘全程打直不彎','垂直往上聳，不要繞圈','頂端停 1 秒','幅度小是正常的，別追求距離'],
+ bad:['手肘彎曲變成划船','轉肩繞圈增加關節磨損'],
+ br:'聳起吐氣，放下吸氣',
+ f:{v:'back', p:P({torso:180, sh:[-6,6], el:[-6,6], hip:[-3,3], kn:[-2,2], dy:0, s:.92}),
+    eq:['barHands'], ar:[{at:'shoulderL',d:[0,-1],l:16},{at:'shoulderR',d:[0,-1],l:16}]},
+ d:[4,12,60]},
+
+/* ── 臂 ───────────────────────────────────────────── */
+{id:'bbcurl', n:'槓鈴彎舉', en:'Barbell Curl', part:'arms', eq:'barbell',
+ pri:['bic'], sec:['fore'], force:'肘屈曲',
+ fn:'上臂貼身固定，只靠手肘彎曲把槓由大腿前捲到胸前。',
+ cues:['手肘夾在身體兩側不前後移動','頂端主動收緊二頭，停半秒','下放放慢，感受離心','手腕保持中立不後折'],
+ bad:['用腰部前後擺動甩重量','手肘往前抬變成前平舉'],
+ br:'捲起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-8,8], el:[-52,52], hip:[-3,3], kn:[-2,2], dy:0, s:.92}),
+    eq:['barHands'], ar:[{at:'bar',d:[0,-1],l:20,c:8}]},
+ d:[3,10,60]},
+
+{id:'dbcurl', n:'啞鈴彎舉', en:'Dumbbell Curl', part:'arms', eq:'dumbbell',
+ pri:['bic'], sec:['fore'], force:'肘屈曲外旋',
+ fn:'掌心朝前捲起，過程中可再加一點前臂外旋加強收縮。',
+ cues:['交替或同時皆可，交替更能專注','起始掌心朝前或中立起後旋','上臂固定，只有前臂在移動','頂端小指略高於拇指'],
+ bad:['聳肩借力','下放太快失去離心刺激'],
+ br:'捲起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-8,8], el:[-48,10], hip:[-3,3], kn:[-2,2], dy:0, s:.92}),
+    eq:['db'], ar:[{at:'handL',d:[.1,-1],l:18,c:7}]},
+ d:[3,12,60]},
+
+{id:'hammer', n:'錘式彎舉', en:'Hammer Curl', part:'arms', eq:'dumbbell',
+ pri:['bic','fore'], sec:[], force:'中立握肘屈曲',
+ fn:'掌心相對握啞鈴，像拿槌子一樣往上捲，強調肱肌與前臂。',
+ cues:['全程掌心相對，不旋轉','上臂貼身固定','可交替做以維持節奏','重量可比一般彎舉略重'],
+ bad:['靠身體晃動','肩膀往前送把啞鈴頂上去'],
+ br:'捲起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-8,8], el:[-46,-4], hip:[-3,3], kn:[-2,2], dy:0, s:.92}),
+    eq:['db'], ar:[{at:'handL',d:[.1,-1],l:18,c:7}]},
+ d:[3,12,60]},
+
+{id:'preacher', n:'牧師椅彎舉', en:'Preacher Curl', part:'arms', eq:'dumbbell',
+ pri:['bic'], sec:['fore'], force:'肘屈曲（固定上臂）',
+ fn:'上臂完全靠在斜墊上，排除借力，全幅度彎舉。',
+ cues:['腋下貼住墊子上緣','下放到手肘接近打直但不鎖死','頂端不要過度前捲失去張力','重量要比站姿彎舉輕'],
+ bad:['下放時完全放鬆讓手肘承受衝擊','屁股離椅往後拉'],
+ br:'捲起吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-46,46], el:[-148,148], hip:[86,94], kn:[6,-6], dy:6, s:.86}),
+    eq:['preachPad','db'], ar:[{at:'bar',d:[0,-1],l:18,c:8}]},
+ d:[3,12,60]},
+
+{id:'pushdown', n:'三頭下壓', en:'Triceps Pushdown', part:'arms', eq:'machine',
+ pri:['tri'], sec:[], force:'肘伸直',
+ fn:'上臂夾住身側，只用手肘伸直把握把壓到大腿前方。',
+ cues:['手肘固定在身體兩側','下壓到底完全伸直，停半秒','上身微前傾但不搖晃','回程只到手肘約 90 度'],
+ bad:['手肘往前後跑，變成用背下壓','身體整個往下壓借體重'],
+ br:'下壓吐氣，回位吸氣',
+ f:{v:'front', p:P({torso:178, sh:[-10,10], el:[156,-156], hip:[-3,3], kn:[-2,2], dy:0, s:.92}),
+    eq:['cableTopShort'], ar:[{at:'bar',d:[0,1],l:22}]},
+ d:[3,12,60]},
+
+{id:'skull', n:'仰臥臂屈伸', en:'Skull Crusher', part:'arms', eq:'barbell',
+ pri:['tri'], sec:[], force:'肘伸直',
+ fn:'平躺後上臂垂直地面固定，只讓前臂繞手肘上下擺動。',
+ cues:['上臂全程垂直，不要往後倒','槓下放到額頭上方或稍後','手肘不外開','用曲槓可減少手腕壓力'],
+ bad:['把上臂往後倒變成過頭伸展','手肘外開分散張力'],
+ br:'下放吸氣，伸直吐氣',
+ f:{v:'front', p:P({torso:-90, sh:[176,184], el:[122,128], hip:[86,94], kn:[-3,3], dy:-4, s:.92}),
+    eq:['bench','bar'], ar:[{at:'bar',d:[-.3,-.95],l:20,c:6}]},
+ d:[3,12,60]},
+
+{id:'ohtri', n:'過頭三頭伸展', en:'Overhead Triceps Extension', part:'arms', eq:'dumbbell',
+ pri:['tri'], sec:[], force:'過頭肘伸直',
+ fn:'雙手把啞鈴舉在頭頂後方，靠伸直手肘把重量頂上去。',
+ cues:['手肘朝前不外開','下放到頸後有拉伸感','核心收緊避免肋骨外翻','伸直但不用力鎖死'],
+ bad:['腰過度後仰','手肘大幅外開造成肩壓力'],
+ br:'下放吸氣，頂起吐氣',
+ f:{v:'front', p:P({torso:180, sh:[-172,172], el:[-118,118], hip:[-3,3], kn:[-2,2], dy:8, s:.86}),
+    eq:['dbTop'], ar:[{at:'bar',d:[0,-1],l:20}]},
+ d:[3,12,60]},
+
+/* ── 核心 ─────────────────────────────────────────── */
+{id:'plank', n:'棒式', en:'Plank', part:'core', eq:'body',
+ pri:['abs'], sec:['obl','esp','del','glu'], force:'抗伸展等長',
+ fn:'用前臂與腳尖撐地，核心對抗身體被地心引力拉塌的力量。',
+ cues:['手肘在肩膀正下方','夾臀、微微捲尾骨，讓腰不塌','肩胛往外推，上背不要凹陷','把重點放在維持形狀，不是撐時間'],
+ bad:['腰下塌讓下背痠','屁股翹高失去核心張力'],
+ br:'保持穩定淺呼吸，不要憋氣',
+ f:{v:'front', p:P({torso:-104, sh:[4,4], el:[-86,-86], hip:[80,80], kn:[80,80], dy:6, s:.82}),
+    eq:['floor'], ar:[{at:'hip',d:[0,-1],l:16},{at:'chest',d:[0,-1],l:14}]},
+ d:[3,45,60], unitReps:'秒'},
+
+{id:'hanglegraise', n:'懸垂舉腿', en:'Hanging Leg Raise', part:'core', eq:'body',
+ pri:['abs','hipf'], sec:['obl','fore','lat'], force:'髖屈曲捲腹',
+ fn:'懸吊於單槓下，把骨盆後捲並將雙腿抬向胸口。',
+ cues:['先讓骨盆後捲，再抬腿','避免前後擺盪，慢上慢下','抬到大腿高於水平','初學可先做屈膝版本'],
+ bad:['靠擺盪的慣性甩腿','只有髖屈肌在動，腹部沒有捲'],
+ br:'抬腿吐氣，下放吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-176,176], el:[-178,178], hip:[82,86], kn:[78,82], dy:10, s:.82}),
+    eq:['pullbar'], ar:[{at:'kneeR',d:[.35,-.94],l:20,c:8}]},
+ d:[3,12,75]},
+
+{id:'cablecrunch', n:'跪姿滑輪捲腹', en:'Cable Crunch', part:'core', eq:'machine',
+ pri:['abs'], sec:['obl'], force:'脊椎屈曲',
+ fn:'跪姿把繩索固定在頭側，用腹部把胸口捲向骨盆。',
+ cues:['髖角度固定，動作來自脊椎捲曲','把手固定在耳朵旁不要拉動','捲到腹部完全收縮，停一拍','回程控制到腹部仍有張力'],
+ bad:['用手臂往下拉繩索','靠髖關節前後折疊當硬舉'],
+ br:'捲起吐氣到底，回位吸氣',
+ f:{v:'front', p:P({torso:214, sh:[-166,-166], el:[-120,-120], hip:[-50,-50], kn:[-88,-88], dy:0, s:.84}),
+    eq:['cableTopShort'], ar:[{at:'chest',d:[-.55,.84],l:20,c:-7}]},
+ d:[3,15,60]},
+
+{id:'russian', n:'俄羅斯轉體', en:'Russian Twist', part:'core', eq:'dumbbell',
+ pri:['obl'], sec:['abs','hipf'], force:'軀幹旋轉',
+ fn:'坐姿後仰，雙手持重物左右轉動軀幹。',
+ cues:['上身後仰約 45 度並保持','用胸口帶動旋轉，不是只有手在移動','轉到底停一拍再換邊','雙腳離地難度更高'],
+ bad:['只有手臂左右擺，軀幹沒轉','背部彎曲讓腰椎旋轉受壓'],
+ br:'每轉一邊吐一次氣',
+ f:{v:'front', p:P({torso:216, sh:[96,96], el:[112,112], hip:[62,62], kn:[18,18], dy:2, s:.84}),
+    eq:['dbHands'], ar:[{at:'bar',d:[.2,-.98],l:18,c:11},{at:'bar',d:[.2,.98],l:18,c:-11}]},
+ d:[3,20,45]},
+
+{id:'abwheel', n:'健腹輪', en:'Ab Wheel Rollout', part:'core', eq:'body',
+ pri:['abs'], sec:['obl','lat','del','esp'], force:'抗伸展',
+ fn:'跪姿推輪向前，核心對抗腰椎被拉開的力量再收回。',
+ cues:['起始先捲尾骨，讓腰呈微駝','推出到核心快撐不住就回來','手臂保持伸直','進步靠增加距離，不是次數'],
+ bad:['推太遠導致腰塌下去','用手臂拉回而不是用腹部'],
+ br:'推出吸氣，收回吐氣',
+ f:{v:'front', p:P({torso:-118, sh:[-20,-20], el:[-20,-20], hip:[50,50], kn:[88,88], dy:2, s:.84}),
+    eq:['wheel','floor'], ar:[{at:'handR',d:[-1,0],l:18},{at:'chest',d:[.3,-.95],l:16}]},
+ d:[3,10,75]},
+
+{id:'sideplank', n:'側棒式', en:'Side Plank', part:'core', eq:'body',
+ pri:['obl'], sec:['abs','glu','sdel'], force:'抗側屈等長',
+ fn:'單側前臂撐地，身體側面成一直線對抗骨盆下沉。',
+ cues:['手肘在肩膀正下方','把髖部主動往上頂','頭、肩、髖、踝在同一直線','兩側都要練，時間對等'],
+ bad:['髖部下沉讓腰側塌陷','身體往前後翻轉失去側向'],
+ br:'穩定淺呼吸，不憋氣',
+ f:{v:'front', p:P({torso:-108, sh:[6,6], el:[-84,-84], hip:[78,78], kn:[78,78], dy:6, s:.82}),
+    eq:['floor'], ar:[{at:'hip',d:[0,-1],l:18}]},
+ d:[3,40,45], unitReps:'秒'}
+];
+const BYID = Object.fromEntries(DB.map(e=>[e.id,e]));
+
+/* ═══════════════════════════════════════════════════════
+   2. 人形繪圖引擎（參數化 SVG）
+   ═══════════════════════════════════════════════════════ */
+const RAD=Math.PI/180, PVX=50, PVY=82;
+const L={ua:19,fa:17,th:25,sk:25,to:36,hd:7.4,shW:13,hpW:7.5};
+const dir=a=>({x:Math.sin(a*RAD),y:Math.cos(a*RAD)});
+const add=(p,d,n)=>({x:p.x+d.x*n,y:p.y+d.y*n});
+const r1=n=>Math.round(n*10)/10;
+
+function joints(p){
+  const s=p.s||1, dx=p.dx||0, dy=p.dy||0;
+  const pv={x:PVX,y:PVY};
+  const td=dir(p.torso);
+  const neck=add(pv,td,L.to*s);
+  const pl={x:td.y,y:-td.x};                     // torso perpendicular (左側)
+  const pr={x:-td.y,y:td.x};
+  const j={
+    pelvis:pv, neck,
+    shoulderL:add(neck,pl,L.shW*s), shoulderR:add(neck,pr,L.shW*s),
+    hipL:add(pv,pl,L.hpW*s), hipR:add(pv,pr,L.hpW*s),
+    head:add(neck,td,(L.hd+3.6)*s)
+  };
+  j.elbowL=add(j.shoulderL,dir(p.sh[0]),L.ua*s);
+  j.elbowR=add(j.shoulderR,dir(p.sh[1]),L.ua*s);
+  j.handL =add(j.elbowL,  dir(p.el[0]),L.fa*s);
+  j.handR =add(j.elbowR,  dir(p.el[1]),L.fa*s);
+  j.kneeL =add(j.hipL,    dir(p.hip[0]),L.th*s);
+  j.kneeR =add(j.hipR,    dir(p.hip[1]),L.th*s);
+  j.footL =add(j.kneeL,   dir(p.kn[0]),L.sk*s);
+  j.footR =add(j.kneeR,   dir(p.kn[1]),L.sk*s);
+  j.chest =add(neck,{x:-td.x,y:-td.y},9*s);
+  j.hip   =pv;
+  j.bar   ={x:(j.handL.x+j.handR.x)/2,y:(j.handL.y+j.handR.y)/2};
+  j.center={x:PVX,y:PVY-16};
+  for(const k in j){ j[k]={x:r1(j[k].x+dx), y:r1(j[k].y+dy)}; }
+  j._s=s; j._td=td;
+  return j;
+}
+
+/* 軀幹肌群路徑（局部座標：骨盆 0,0 → 頸部 0,-36） */
+const TORSO_OUT='M -13.2,-35 Q -14,-22 -10.6,-1.5 L 10.6,-1.5 Q 14,-22 13.2,-35 Q 0,-31 -13.2,-35 Z';
+const TP={
+  ch:'M -12,-33.4 Q -2.4,-31.6 -1.6,-21.6 Q -8,-18.6 -12.2,-24.4 Z|mirror',
+  uch:'M -11.8,-33.8 Q -2,-31.4 -1.6,-26.6 Q -7.4,-27.4 -12,-29.6 Z|mirror',
+  abs:'M -5.4,-20.4 Q 0,-21.2 5.4,-20.4 L 4.6,-2.6 Q 0,-1.4 -4.6,-2.6 Z',
+  obl:'M -10.6,-19.6 Q -6.6,-18.6 -6.2,-12.6 L -8.6,-2.8 Q -10.4,-10 -10.6,-19.6 Z|mirror',
+  lat:'M -12.6,-30.4 Q -13.4,-16 -6.4,-5.6 L -8.4,-16 L -8.6,-31 Z|mirror',
+  tra:'M -9.6,-35.6 Q 0,-30.4 9.6,-35.6 L 12.6,-32.6 Q 0,-25.4 -12.6,-32.6 Z',
+  rho:'M -8,-30.6 L 8,-30.6 L 6,-19.6 L -6,-19.6 Z',
+  esp:'M -5.2,-22.6 L -1.4,-22.6 L -1.8,-2.6 L -5.6,-2.6 Z|mirror',
+  ser:'M -11.6,-24.4 L -6.6,-22.6 L -7,-19.4 L -11.4,-21 Z|mirror'
+};
+function torsoPaths(ids,cls){
+  let out='';
+  for(const id of ids){
+    const raw=TP[id]; if(!raw) continue;
+    const [d,mir]=raw.split('|');
+    out+=`<path class="${cls}" d="${d}"/>`;
+    if(mir==='mirror') out+=`<path class="${cls}" d="${d}" transform="scale(-1,1)"/>`;
+  }
+  return out;
+}
+
+function seg(a,b,w,cls){ return `<line class="${cls}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke-width="${w}"/>`; }
+
+function arrow(from,d,len,curve,w){
+  const n=Math.hypot(d[0],d[1])||1, ux=d[0]/n, uy=d[1]/n;
+  const A={x:from.x+ux*7, y:from.y+uy*7};
+  const B={x:A.x+ux*len, y:A.y+uy*len};
+  const c=curve||0;
+  const C={x:(A.x+B.x)/2 - uy*c, y:(A.y+B.y)/2 + ux*c};
+  const hd={x:B.x-C.x, y:B.y-C.y}, hn=Math.hypot(hd.x,hd.y)||1;
+  const hx=hd.x/hn, hy=hd.y/hn, s=4.4;
+  const p1={x:B.x-hx*s-hy*s*.62, y:B.y-hy*s+hx*s*.62};
+  const p2={x:B.x-hx*s+hy*s*.62, y:B.y-hy*s-hx*s*.62};
+  return `<path class="ar" d="M ${r1(A.x)},${r1(A.y)} Q ${r1(C.x)},${r1(C.y)} ${r1(B.x)},${r1(B.y)}" stroke-width="${w}"/>`
+       + `<path class="arh" d="M ${r1(B.x)},${r1(B.y)} L ${r1(p1.x)},${r1(p1.y)} L ${r1(p2.x)},${r1(p2.y)} Z"/>`;
+}
+
+/* 器材零件 */
+function gear(kind,j){
+  const s=j._s, g=[];
+  const bar=(c,half,plate)=>{
+    g.push(`<line class="eq" x1="${c.x-half}" y1="${c.y}" x2="${c.x+half}" y2="${c.y}" stroke-width="2.6"/>`);
+    if(plate!==false){
+      [-1,1].forEach(k=>g.push(`<rect class="eqf" x="${c.x+k*half-(k>0?4.5:0)}" y="${c.y-8}" width="4.5" height="16" rx="1.4"/>`));
+    }
+  };
+  const dbAt=p=>{
+    g.push(`<line class="eq" x1="${p.x-6.5}" y1="${p.y}" x2="${p.x+6.5}" y2="${p.y}" stroke-width="2.2"/>`);
+    [-1,1].forEach(k=>g.push(`<rect class="eqf" x="${p.x+k*6.5-(k>0?3.4:0)}" y="${p.y-5}" width="3.4" height="10" rx="1.2"/>`));
+  };
+  const line=(a,b,w,c)=>g.push(`<line class="${c||'eq'}" x1="${r1(a.x)}" y1="${r1(a.y)}" x2="${r1(b.x)}" y2="${r1(b.y)}" stroke-width="${w||2}"/>`);
+  const hm={x:(j.handL.x+j.handR.x)/2,y:(j.handL.y+j.handR.y)/2};
+
+  switch(kind){
+    case 'bar': bar(hm,24*s); break;
+    case 'barHands': bar(hm,22*s); break;
+    case 'barGround': bar({x:hm.x,y:Math.max(hm.y,j.footL.y-2)},24*s); break;
+    case 'barBack': bar({x:j.neck.x,y:j.neck.y+1},25*s); break;
+    case 'barFront': bar({x:j.neck.x+3,y:j.neck.y+3},23*s); break;
+    case 'db': dbAt(j.handL); dbAt(j.handR); break;
+    case 'dbR': dbAt(j.handR); break;
+    case 'dbHands': dbAt(hm); break;
+    case 'dbTop': dbAt(hm); break;
+    case 'bench': {
+      const td=j._td, n={x:-td.y,y:td.x};
+      const flip=((j.bar.x-j.pelvis.x)*n.x+(j.bar.y-j.pelvis.y)*n.y)>0?-1:1;
+      const o=11*s, a=add(add(j.pelvis,n,o*flip),td,-6*s), b=add(add(j.neck,n,o*flip),td,9*s);
+      line(a,b,7,'eqf2'); break;
+    }
+    case 'benchInc': {
+      const td=j._td, n={x:-td.y,y:td.x};
+      const flip=((j.bar.x-j.pelvis.x)*n.x+(j.bar.y-j.pelvis.y)*n.y)>0?-1:1;
+      const o=11*s, a=add(add(j.pelvis,n,o*flip),td,-8*s), b=add(add(j.neck,n,o*flip),td,7*s);
+      line(a,b,7,'eqf2');
+      line(a,{x:a.x,y:a.y+16},3,'eq'); break;
+    }
+    case 'benchLow': line({x:j.kneeL.x-14,y:j.kneeL.y+2},{x:j.kneeL.x+16,y:j.kneeL.y+2},6,'eqf2'); break;
+    case 'benchBack': line({x:j.footR.x-6,y:j.footR.y+2},{x:j.footR.x+12,y:j.footR.y+2},6,'eqf2'); break;
+    case 'seat': line({x:j.pelvis.x-13,y:j.pelvis.y+7},{x:j.pelvis.x+15,y:j.pelvis.y+7},6,'eqf2'); break;
+    case 'seatBack':
+      line({x:j.pelvis.x-14,y:j.pelvis.y+7},{x:j.pelvis.x+14,y:j.pelvis.y+7},6,'eqf2');
+      line({x:j.pelvis.x+11,y:j.pelvis.y+5},{x:j.neck.x+11,y:j.neck.y+4},6,'eqf2'); break;
+    case 'pressSeat': {
+      const td=j._td, n={x:-td.y,y:td.x};
+      const a=add(add(j.pelvis,n,12*s),td,-4*s), b=add(add(j.neck,n,12*s),td,6*s);
+      line(a,b,7,'eqf2'); break;
+    }
+    case 'plate': g.push(`<rect class="eqf" x="${j.footR.x-2}" y="${j.footR.y-16}" width="6" height="30" rx="2"/>`); break;
+    case 'pad': line({x:j.footR.x-4,y:j.footR.y},{x:j.footR.x+5,y:j.footR.y},7,'eqf2'); break;
+    case 'preachPad': line({x:j.elbowL.x-3,y:j.elbowL.y+5},{x:j.bar.x+2,y:j.bar.y+9},7,'eqf2'); break;
+    case 'pullbar': bar({x:hm.x,y:hm.y-1},26*s,false);
+      line({x:hm.x-26*s,y:hm.y-1},{x:hm.x-26*s,y:hm.y-11},2.4);
+      line({x:hm.x+26*s,y:hm.y-1},{x:hm.x+26*s,y:hm.y-11},2.4); break;
+    case 'dipbar':
+      line({x:j.handL.x-9,y:j.handL.y},{x:j.handL.x+5,y:j.handL.y},2.6);
+      line({x:j.handR.x-5,y:j.handR.y},{x:j.handR.x+9,y:j.handR.y},2.6); break;
+    case 'step': line({x:j.footL.x-9,y:j.footL.y+3},{x:j.footR.x+9,y:j.footR.y+3},5,'eqf2'); break;
+    case 'floor': line({x:6,y:Math.max(j.handR.y,j.footR.y)+3},{x:94,y:Math.max(j.handR.y,j.footR.y)+3},2,'eqf3'); break;
+    case 'wheel': g.push(`<circle class="eqf" cx="${j.handR.x}" cy="${j.handR.y+3}" r="5.4"/>`); break;
+    case 'cableHigh':
+      [[j.handL,-1],[j.handR,1]].forEach(([h,k])=>{
+        const an={x:50+k*40,y:16};
+        line(an,h,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`);
+      }); break;
+    case 'cableHighFront': { const an={x:50,y:14}; line(an,j.handL,1.4,'cab'); line(an,j.handR,1.4,'cab');
+      g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
+    case 'cableTop': { const an={x:hm.x,y:10}; line(an,hm,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
+    case 'cableTopShort': { const an={x:hm.x,y:12}; line(an,hm,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
+    case 'cableLowFront': { const an={x:14,y:hm.y+10}; line(an,hm,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
+  }
+  return g.join('');
+}
+
+const ARROW_W=2.2;
+function figureSVG(ex, opt){
+  opt=opt||{};
+  let f=ex.f||{v:'front',p:P({}),eq:[],ar:[]};
+  if(opt.neutral) f={v:f.v, p:P({dy:-2}), eq:[], ar:[]};
+  const p=f.p, j=joints(p), s=j._s;
+  const pri=new Set(ex.pri||[]), sec=new Set(ex.sec||[]);
+  const reg=id=>M[id]?M[id][1]:null;
+  const has=(set,r)=>[...set].some(id=>reg(id)===r);
+  const tone=r=>has(pri,r)?'hi':(has(sec,r)?'lo':'');
+
+  // torso group transform
+  const td=j._td, ang=Math.atan2(td.x,-td.y)*180/Math.PI;
+  const tPri=[...pri].filter(id=>reg(id)==='torso');
+  const tSec=[...sec].filter(id=>reg(id)==='torso');
+
+  const bw=7.4*s, lw=8.6*s;
+  const body=[
+    // legs
+    seg(j.hipL,j.kneeL,lw,'lm'), seg(j.kneeL,j.footL,lw*.82,'lm'),
+    seg(j.hipR,j.kneeR,lw,'lm'), seg(j.kneeR,j.footR,lw*.82,'lm'),
+    // torso base
+    `<g transform="translate(${j.pelvis.x},${j.pelvis.y}) rotate(${r1(ang)}) scale(${s})"><path class="lm2" d="${TORSO_OUT}"/></g>`,
+    // arms
+    seg(j.shoulderL,j.elbowL,bw,'lm'), seg(j.elbowL,j.handL,bw*.84,'lm'),
+    seg(j.shoulderR,j.elbowR,bw,'lm'), seg(j.elbowR,j.handR,bw*.84,'lm'),
+    `<circle class="lm2" cx="${j.head.x}" cy="${j.head.y}" r="${r1(L.hd*s)}"/>`
+  ].join('');
+
+  const hi=[];
+  const put=(a,b,w,cls)=>hi.push(seg(a,b,w,cls));
+  const t2=(r,fn)=>{ const t=tone(r); if(t) fn(t==='hi'?'mh':'ms'); };
+  t2('upperarm',c=>{ put(j.shoulderL,j.elbowL,bw*.78,c); put(j.shoulderR,j.elbowR,bw*.78,c); });
+  t2('forearm', c=>{ put(j.elbowL,j.handL,bw*.66,c); put(j.elbowR,j.handR,bw*.66,c); });
+  t2('thigh',   c=>{ put(j.hipL,j.kneeL,lw*.76,c); put(j.hipR,j.kneeR,lw*.76,c); });
+  t2('shank',   c=>{ put(j.kneeL,j.footL,lw*.64,c); put(j.kneeR,j.footR,lw*.64,c); });
+  const cf=c=>c==='mh'?'mhf':'msf';
+  t2('shoulder',c=>{ hi.push(`<circle class="${cf(c)}" cx="${j.shoulderL.x}" cy="${j.shoulderL.y}" r="${r1(5.2*s)}"/>`);
+                     hi.push(`<circle class="${cf(c)}" cx="${j.shoulderR.x}" cy="${j.shoulderR.y}" r="${r1(5.2*s)}"/>`); });
+  t2('hip',     c=>{ hi.push(`<circle class="${cf(c)}" cx="${j.hipL.x}" cy="${r1(j.hipL.y+2)}" r="${r1(5.4*s)}"/>`);
+                     hi.push(`<circle class="${cf(c)}" cx="${j.hipR.x}" cy="${r1(j.hipR.y+2)}" r="${r1(5.4*s)}"/>`); });
+  if(tPri.length||tSec.length){
+    hi.push(`<g transform="translate(${j.pelvis.x},${j.pelvis.y}) rotate(${r1(ang)}) scale(${s})">`
+      + torsoPaths(tSec,'msf') + torsoPaths(tPri,'mhf') + `</g>`);
+  }
+
+  const eqs=(f.eq||[]).map(k=>gear(k,j)).join('');
+  const ars=opt.arrows===false?'':(f.ar||[]).map(a=>{
+    const anchor=j[a.at]||j.center;
+    return arrow(anchor,a.d,(a.l||20)*s,(a.c||0)*s,ARROW_W);
+  }).join('');
+
+  const cls='fig'+(opt.small?' sm':'');
+  return `<svg class="${cls}" viewBox="0 0 100 145" role="img" aria-label="${ex.n} 動作示意"
+    stroke-linecap="round" stroke-linejoin="round">${eqs}${body}${hi}${ars}</svg>`;
+}
+</script>
+
+<style>
+svg.fig .lm{stroke:var(--fig);fill:none}
+svg.fig .lm2{fill:var(--fig);stroke:none}
+svg.fig .mh{stroke:var(--accent);fill:none}
+svg.fig .ms{stroke:var(--accent);opacity:.34;fill:none}
+svg.fig .mhf{fill:var(--accent);stroke:none}
+svg.fig .msf{fill:var(--accent);opacity:.3;stroke:none}
+svg.fig .eq{stroke:var(--figLine);fill:none}
+svg.fig .eqf{fill:var(--figLine);stroke:none}
+svg.fig .eqf2{stroke:var(--figLine);opacity:.7;fill:none}
+svg.fig .eqf3{stroke:var(--figLine);opacity:.45;fill:none;stroke-dasharray:3 4}
+svg.fig .cab{stroke:var(--figLine);opacity:.75;fill:none}
+svg.fig .ar{stroke:var(--accent2);fill:none;opacity:.95}
+svg.fig .arh{fill:var(--accent2);stroke:none;opacity:.95}
+svg.fig.sm .ar,svg.fig.sm .arh{opacity:.85}
+</style>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════════
+   3. 資料層
+   ═══════════════════════════════════════════════════════ */
+/* localStorage 不是「一定存在」的東西：沙箱 iframe 會直接丟 SecurityError，
+   無痕模式與封鎖網站資料的設定也會。舊版把錯誤靜靜吞掉，結果是使用者以為
+   有存、隔天打開全空。這一層負責問清楚「到底能不能存」，並在不能存的時候
+   讓 App 繼續可用但大聲說出來。 */
+const KEY='backyard_gym_v1', BAK=KEY+'_bak';
+const Store=(()=>{
+  let ok=false, why='', mem=Object.create(null);
+  try{
+    const k=KEY+'_probe', v=String(Date.now());
+    localStorage.setItem(k,v);
+    ok = localStorage.getItem(k)===v;
+    localStorage.removeItem(k);
+    if(!ok) why='這個瀏覽器寫得進去卻讀不回來';
+  }catch(e){
+    ok=false;
+    why = (e&&(e.name==='QuotaExceededError'||e.code===22))
+      ? '瀏覽器的儲存空間已經滿了'
+      : '這個環境不允許網頁保存資料（沙箱或無痕模式）';
+  }
+  return {
+    get ok(){return ok;}, get why(){return why;},
+    read(k){ try{ return ok?localStorage.getItem(k):(k in mem?mem[k]:null); }catch(_){ return null; } },
+    write(k,v){
+      if(!ok){ mem[k]=v; return false; }
+      try{ localStorage.setItem(k,v); return true; }
+      catch(e){
+        ok=false; mem[k]=v;
+        why = (e&&(e.name==='QuotaExceededError'||e.code===22))
+          ? '瀏覽器的儲存空間已經滿了，新的紀錄寫不進去'
+          : '瀏覽器拒絕了寫入';
+        return false;
+      }
+    },
+    size(){ try{ return ok?((localStorage.getItem(KEY)||'').length):0; }catch(_){ return 0; } }
+  };
+})();
+let lastSaved=null;
+
+const uid=()=>Math.random().toString(36).slice(2,9);
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parseISO=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c);};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+const WD=['日','一','二','三','四','五','六'];
+
+const TPL_SEED=[
+  {name:'推日 · 胸肩三頭', accent:'#D98B45', ids:['bench','inclinedb','ohp','lateral','pushdown']},
+  {name:'拉日 · 背二頭',   accent:'#5D91AA', ids:['deadlift','pullup','row','facepull','bbcurl']},
+  {name:'腿日 · 下肢',     accent:'#7E9B5A', ids:['squat','rdl','legpress','lunge','calfraise','plank']}
+];
+function mkEntry(exId){
+  const e=BYID[exId]; if(!e) return null;
+  const [ns,nr,rest]=e.d;
+  return {id:uid(), ex:exId, rest, sets:Array.from({length:ns},()=>({w:null,r:nr,aw:null,ar:null,ok:false}))};
+}
+function mkTemplate(t){ return {id:uid(), name:t.name, accent:t.accent, entries:t.ids.map(mkEntry).filter(Boolean)}; }
+
+let S, recovered=false;
+function parseState(raw){
+  try{ const o=JSON.parse(raw||'null'); return (o&&o.version===1&&o.days)?o:null; }catch(_){ return null; }
+}
+function load(){
+  recovered=false;
+  let s=parseState(Store.read(KEY));
+  if(!s){ const b=parseState(Store.read(BAK)); if(b){ s=b; recovered=true; } }
+  if(!s){
+    S={version:1, settings:{unit:'kg'}, days:{}, templates:TPL_SEED.map(mkTemplate), custom:[], manualMax:{}, bakAt:0};
+    S.days[iso(new Date())]={entries:S.templates[0].entries.map(cloneEntry)};
+    save();
+  } else {
+    S=s;
+    S.settings=S.settings||{unit:'kg'};
+    S.days=S.days||{}; S.templates=S.templates||[]; S.custom=S.custom||[]; S.manualMax=S.manualMax||{};
+    S.custom.forEach(c=>{ if(!BYID[c.id]) { DB.push(c); BYID[c.id]=c; } });
+    if(recovered) save();   // 把回復後的內容寫回主檔，別讓壞掉的主檔留著
+  }
+}
+function save(){
+  // 存檔前留一份「上一個好的狀態」，主檔壞掉還救得回來。
+  // 以時間節流（10 分鐘）而不是以天：一天一次的快照對訓練當下沒有意義，
+  // 剛記完的幾組會整組不見。備份不存在時一律補寫。
+  if(Store.ok){
+    const prev=Store.read(KEY), now=Date.now();
+    if(prev && (!Store.read(BAK) || !S.bakAt || now-S.bakAt > 600000)){
+      Store.write(BAK,prev);
+      S.bakAt=now;
+    }
+  }
+  Store.write(KEY,JSON.stringify(S));
+  lastSaved=new Date();
+  updateWarn();
+}
+function updateWarn(){
+  const el=$('warn'); if(!el) return;
+  if(Store.ok){ el.hidden=true; return; }
+  el.hidden=false;
+  $('warnWhy').textContent=Store.why+'，關掉分頁就會消失。請立刻匯出備份。';
+}
+function cloneEntry(en){ return {id:uid(), ex:en.ex, rest:en.rest, sets:en.sets.map(s=>({w:s.w,r:s.r,aw:null,ar:null,ok:false}))}; }
+function dayOf(k){ return S.days[k]||{entries:[]}; }
+function ensureDay(k){ if(!S.days[k]) S.days[k]={entries:[]}; return S.days[k]; }
+function pruneDay(k){ if(S.days[k]&&!S.days[k].entries.length) delete S.days[k]; }
+
+/* 單位換算：內部一律 kg */
+const KGLB=2.2046226;
+const u=()=>S.settings.unit;
+const toU=kg=>kg==null?null:(u()==='kg'?kg:kg*KGLB);
+const toKg=v=>v==null?null:(u()==='kg'?v:v/KGLB);
+function fmt(n,dp){ if(n==null||!isFinite(n)) return '–'; const r=Math.round(n*(dp?10:1))/(dp?10:1); return String(r).replace(/\.0$/,''); }
+const dispW=kg=>fmt(toU(kg),true);
+
+/* 由所有紀錄推導最佳成績 */
+function bestOf(exId, before){
+  let w=0,e1=0,wd=null,ed=null,lastDate=null,lastSets=null;
+  for(const k of Object.keys(S.days)){
+    for(const en of S.days[k].entries){
+      if(en.ex!==exId) continue;
+      let any=false;
+      for(const st of en.sets){
+        if(!st.ok) continue;
+        const kg=st.aw!=null?st.aw:st.w, rp=st.ar!=null?st.ar:st.r;
+        if(!kg||!rp) continue;
+        any=true;
+        if(kg>w){w=kg;wd=k;}
+        const e=kg*(1+rp/30);
+        if(e>e1){e1=e;ed=k;}
+      }
+      if(any&&(!before||k<before)&&(!lastDate||k>lastDate)){ lastDate=k; lastSets=en.sets.filter(s=>s.ok); }
+    }
+  }
+  const mm=S.manualMax[exId];
+  if(mm&&mm>w){ w=mm; wd=null; }
+  return {w:w||null,e1:e1||null,wd,ed,lastDate,lastSets};
+}
+
+/* ═══════════════════════════════════════════════════════
+   4. 畫面
+   ═══════════════════════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+let sel=iso(new Date());
+let weekAnchor=iso(new Date());
+
+function weekStart(k){ const d=parseISO(k); return addDays(d,-((d.getDay()+6)%7)); } // 週一起始
+
+function renderWeek(){
+  const ws=weekStart(weekAnchor), today=iso(new Date());
+  const mid=addDays(ws,3);
+  $('monthLbl').innerHTML=`${mid.getFullYear()} 年 ${mid.getMonth()+1} 月<small>第 ${Math.ceil((mid.getDate())/7)} 週</small>`;
+  $('btnToday').hidden=(sel===today);
+  const box=$('week'); box.innerHTML='';
+  for(let i=0;i<7;i++){
+    const d=addDays(ws,i), k=iso(d), dd=dayOf(k);
+    const total=dd.entries.reduce((a,e)=>a+e.sets.length,0);
+    const done=dd.entries.reduce((a,e)=>a+e.sets.filter(s=>s.ok).length,0);
+    const b=document.createElement('button');
+    b.className='day'+(k===sel?' sel':'')+(k===today?' today':'');
+    b.innerHTML=`<span class="wd">${WD[d.getDay()]}</span><span class="dd num">${d.getDate()}</span>
+      <span class="dot ${total===0?'none':(done===total?'full':'')}"></span>`;
+    b.onclick=()=>{ sel=k; weekAnchor=k; renderAll(); };
+    box.appendChild(b);
+  }
+}
+
+function ringSVG(done,total){
+  const r=15, C=2*Math.PI*r, pct=total?done/total:0;
+  const arc=done>0?`<circle cx="19" cy="19" r="${r}" fill="none" stroke="${done===total?'var(--ok)':'var(--accent)'}" stroke-width="3"
+      stroke-dasharray="${(C*pct).toFixed(1)} ${C.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 19 19)"/>`:'';
+  return `<svg class="ring ${total&&done===total?'done':''}" viewBox="0 0 38 38">
+    <circle cx="19" cy="19" r="${r}" fill="none" stroke="var(--line2)" stroke-width="3"/>${arc}
+    <text x="19" y="19" text-anchor="middle" dominant-baseline="central" class="num">${done}/${total}</text></svg>`;
+}
+
+function schemeLine(en){
+  const e=BYID[en.ex]; const ru=e&&e.unitReps||'下';
+  const ws=en.sets.map(s=>s.aw!=null?s.aw:s.w).filter(v=>v!=null&&v>0);
+  const rs=en.sets.map(s=>s.ar!=null?s.ar:s.r).filter(v=>v!=null);
+  const same=v=>v.length&&v.every(x=>x===v[0]);
+  const rTxt=same(rs)?`${rs[0]}`:(rs.length?`${Math.min(...rs)}–${Math.max(...rs)}`:'–');
+  if(!ws.length) return `<b>${en.sets.length}</b> 組 × <b>${rTxt}</b> ${ru} · <span style="color:var(--text3)">未設重量</span>`;
+  const wTxt=same(ws)?dispW(ws[0]):`${dispW(Math.min(...ws))}–${dispW(Math.max(...ws))}`;
+  return `<b>${en.sets.length}</b> 組 × <b>${rTxt}</b> ${ru} @ <b>${wTxt}</b> ${u()}`;
+}
+
+function renderDay(){
+  const d=parseISO(sel), k=sel, dd=dayOf(k), today=iso(new Date());
+  const rel=k===today?'今天':(k===iso(addDays(new Date(),1))?'明天':(k===iso(addDays(new Date(),-1))?'昨天':''));
+  const parts=[...new Set(dd.entries.map(e=>BYID[e.ex]&&BYID[e.ex].part).filter(Boolean))];
+  const setsAll=dd.entries.reduce((a,e)=>a+e.sets.length,0);
+  const setsDone=dd.entries.reduce((a,e)=>a+e.sets.filter(s=>s.ok).length,0);
+  let vol=0;
+  dd.entries.forEach(e=>e.sets.forEach(s=>{ if(s.ok){ const w=s.aw!=null?s.aw:s.w, r=s.ar!=null?s.ar:s.r; if(w&&r) vol+=w*r; }}));
+
+  let h=`<div class="dayhead">
+    <div class="dayttl serif"><span class="wk">${rel||'星期'+WD[d.getDay()]}${rel?' · 星期'+WD[d.getDay()]:''}</span>${d.getMonth()+1} 月 ${d.getDate()} 日</div>
+    <div class="focus">${parts.map(p=>`<span class="ptag" style="color:${PARTS[p].c};background:${PARTS[p].c}22">${PARTS[p].n}</span>`).join('')}</div>
+  </div>`;
+
+  if(dd.entries.length){
+    h+=`<div class="stats">
+      <div class="stat"><div class="v num">${dd.entries.length}<em>項</em></div><div class="k">動作</div></div>
+      <div class="stat ${setsDone===setsAll?'done':''}"><div class="v num">${setsDone}<em>/${setsAll}</em></div><div class="k">完成組數</div></div>
+      <div class="stat"><div class="v num">${fmt(toU(vol))}<em>${u()}</em></div><div class="k">訓練總量</div></div>
+    </div><div class="cards">`;
+    dd.entries.forEach(en=>{
+      const e=BYID[en.ex]; if(!e) return;
+      const done=en.sets.filter(s=>s.ok).length;
+      h+=`<button class="card ${done===en.sets.length?'complete':''}" data-entry="${en.id}">
+        <span class="thumb" data-intro="${e.id}">${figureSVG(e,{small:true})}</span>
+        <span class="cbody">
+          <span class="cname">${e.n}</span>
+          <span class="cmeta"><i class="cdot" style="background:${PARTS[e.part].c}"></i><span class="cequip">${PARTS[e.part].n} · ${EQ[e.eq]}</span></span>
+          <span class="cscheme num">${schemeLine(en)}</span>
+        </span>
+        ${ringSVG(done,en.sets.length)}
+      </button>`;
+    });
+    h+=`</div><div class="dayfoot">
+      <button class="btn gho" id="saveTpl">存成範本</button>
+      <button class="btn gho" id="clearDay">清空本日</button>
+    </div>`;
+  } else {
+    h+=`<div class="empty">
+      <h3>這天還沒有課表</h3>
+      <p>套用一份範本快速開始，<br>或從動作庫挑選今天想練的動作。</p>
+      <div class="row">
+        <button class="btn pri" id="emptyTpl">套用範本</button>
+        <button class="btn" id="emptyLib">從動作庫加入</button>
+      </div>
+    </div>`;
+  }
+  $('main').innerHTML=h;
+
+  $('main').querySelectorAll('.card').forEach(c=>{
+    c.onclick=ev=>{
+      const t=ev.target.closest('[data-intro]');
+      if(t){ ev.stopPropagation(); openIntro(t.dataset.intro); return; }
+      openDetail(c.dataset.entry);
+    };
+  });
+  const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
+  on('emptyTpl',openTemplates); on('emptyLib',openLibrary);
+  on('saveTpl',saveAsTemplate); on('clearDay',clearDay);
+}
+function renderAll(){ renderWeek(); renderDay(); }
+
+/* ═══════════════════════════════════════════════════════
+   5. Sheet 基礎
+   ═══════════════════════════════════════════════════════ */
+let sheetStack=[];
+function openSheet(title,html,foot,after){
+  $('sheetTtl').textContent=title;
+  $('sheetBody').innerHTML=html;
+  $('sheetBody').scrollTop=0;
+  const f=$('sheetFoot');
+  if(foot){ f.hidden=false; f.innerHTML=foot; } else { f.hidden=true; f.innerHTML=''; }
+  $('scrim').classList.add('on'); $('sheet').classList.add('on');
+  document.body.style.overflow='hidden';
+  if(after) after();
+}
+function closeSheet(){
+  $('scrim').classList.remove('on'); $('sheet').classList.remove('on');
+  document.body.style.overflow='';
+  sheetStack=[];
+}
+$('scrim').onclick=closeSheet; $('sheetClose').onclick=closeSheet;
+
+let toastT;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),1900);
+}
+
+/* ═══════════════════════════════════════════════════════
+   6. 動作詳情
+   ═══════════════════════════════════════════════════════ */
+function findEntry(eid){
+  const dd=dayOf(sel);
+  return dd.entries.find(e=>e.id===eid);
+}
+function openDetail(eid){
+  const en=findEntry(eid); if(!en) return;
+  const e=BYID[en.ex]; if(!e) return;
+  const b=bestOf(e.id, sel);
+  const ru=e.unitReps||'下';
+  const lastTxt=b.lastDate
+    ? `${parseISO(b.lastDate).getMonth()+1}/${parseISO(b.lastDate).getDate()}　${b.lastSets.map(s=>`${dispW(s.aw!=null?s.aw:s.w)}×${s.ar!=null?s.ar:s.r}`).join('、')}`
+    : '尚無完成紀錄';
+
+  const html=`
+  <div class="dtop">
+    <div class="dfig" data-intro="${e.id}" role="button" tabindex="0">${figureSVG(e)}<span class="hint">看動作說明</span></div>
+    <div class="prgrid">
+      <div class="prcell hi"><div class="k">最大重量</div><div class="v num">${dispW(b.w)}<em>${u()}</em></div></div>
+      <div class="prcell"><div class="k">估算 1RM</div><div class="v num">${dispW(b.e1)}<em>${u()}</em></div></div>
+      <div class="lastlog"><span style="color:var(--text3)">上次</span><b class="num">${lastTxt}</b></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">今日組數</span><span class="rule"></span></div>
+    <div class="sets" id="sets"></div>
+    <button class="addset" id="addSet">＋ 新增一組</button>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">重量組數搭配</span><span class="rule"></span></div>
+    <div class="mix" id="mix"></div>
+    <div class="mixnote" id="mixnote"></div>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">組間休息</span><span class="rule"></span></div>
+    <div class="restrow" id="rest"></div>
+  </div>`;
+
+  const foot=`<button class="btn dgr" id="delEntry">移出課表</button><button class="btn pri" id="doneDetail">完成</button>`;
+  openSheet(e.n, html, foot, ()=>{
+    drawSets(en,e,ru); drawMix(en,e,b,eid); drawRest(en);
+    $('sheetBody').querySelector('[data-intro]').onclick=()=>openIntro(e.id,eid);
+    $('addSet').onclick=()=>{
+      const last=en.sets[en.sets.length-1]||{w:null,r:e.d[1]};
+      en.sets.push({w:last.w,r:last.r,aw:null,ar:null,ok:false});
+      save(); drawSets(en,e,ru,eid); renderAll();
+    };
+    $('delEntry').onclick=()=>{
+      const dd=ensureDay(sel);
+      dd.entries=dd.entries.filter(x=>x.id!==eid);
+      pruneDay(sel); save(); closeSheet(); renderAll(); toast('已移出課表');
+    };
+    $('doneDetail').onclick=closeSheet;
+  });
+}
+
+function refreshTop(en,e,eid){
+  const b=bestOf(e.id, sel);
+  const vs=$('sheetBody').querySelectorAll('.prcell .v');
+  if(vs[0]) vs[0].innerHTML=`${dispW(b.w)}<em>${u()}</em>`;
+  if(vs[1]) vs[1].innerHTML=`${dispW(b.e1)}<em>${u()}</em>`;
+  drawMix(en,e,b,eid);
+}
+function drawSets(en,e,ru,eid){
+  const box=$('sets'); if(!box) return;
+  box.innerHTML=en.sets.map((s,i)=>{
+    const w=s.aw!=null?s.aw:s.w, r=s.ar!=null?s.ar:s.r;
+    return `<div class="setrow ${s.ok?'on':''}" data-i="${i}">
+      <span class="setno num">${i+1}</span>
+      <span class="fld"><input type="number" inputmode="decimal" step="0.5" min="0" data-f="w" value="${w!=null?fmt(toU(w),true):''}" placeholder="–" aria-label="第${i+1}組重量"><u>${u()}</u></span>
+      <span class="setx">×</span>
+      <span class="fld"><input type="number" inputmode="numeric" step="1" min="0" data-f="r" value="${r!=null?r:''}" placeholder="–" aria-label="第${i+1}組次數"><u>${ru}</u></span>
+      <button class="chk" data-a="ok" aria-label="標記完成"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>
+      <button class="del" data-a="del" aria-label="刪除這組"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('.setrow').forEach(row=>{
+    const i=+row.dataset.i, s=en.sets[i];
+    row.querySelectorAll('input').forEach(inp=>{
+      inp.onchange=()=>{
+        const v=inp.value===''?null:parseFloat(inp.value);
+        if(inp.dataset.f==='w'){ const kg=v==null?null:toKg(v); if(s.ok) s.aw=kg; else { s.w=kg; s.aw=null; } }
+        else { if(s.ok) s.ar=v; else { s.r=v; s.ar=null; } }
+        save(); refreshTop(en,e,eid); renderAll();
+      };
+      inp.onfocus=()=>inp.select();
+    });
+    row.querySelector('[data-a="ok"]').onclick=()=>{
+      s.ok=!s.ok;
+      if(s.ok){ if(s.aw==null) s.aw=s.w; if(s.ar==null) s.ar=s.r; }
+      save(); drawSets(en,e,ru,eid); refreshTop(en,e,eid); renderAll();
+    };
+    row.querySelector('[data-a="del"]').onclick=()=>{
+      if(en.sets.length<=1){ toast('至少保留一組'); return; }
+      en.sets.splice(i,1); save(); drawSets(en,e,ru,eid); refreshTop(en,e,eid); renderAll();
+    };
+  });
+}
+
+const MIXES=[
+  {g:'力量',   s:5, r:3,  pct:.88, note:'重量為主，次數低'},
+  {g:'肌力',   s:5, r:5,  pct:.82, note:'經典 5×5'},
+  {g:'增肌',   s:4, r:8,  pct:.75, note:'量與強度平衡'},
+  {g:'代謝',   s:3, r:12, pct:.67, note:'泵感與耐力'},
+  {g:'熱身',   s:2, r:10, pct:.50, note:'正式組前先跑一遍'}
+];
+function drawMix(en,e,b,eid){
+  const box=$('mix'), note=$('mixnote'); if(!box) return;
+  if(!b.e1){
+    box.innerHTML=`<div class="mixr" style="display:block"><span class="g">還沒有配重建議</span><br><span class="s">在上面填入重量並打勾任一組，這裡就會依你的 1RM 算出五種搭配</span></div>`;
+    note.textContent='';
+    return;
+  }
+  const step=u()==='kg'?2.5:5;
+  box.innerHTML=MIXES.map((m,i)=>{
+    const raw=toU(b.e1)*m.pct;
+    const w=Math.max(step,Math.round(raw/step)*step);
+    return `<button class="mixr" data-i="${i}" data-w="${w}" data-s="${m.s}" data-r="${m.r}">
+      <span><span class="g">${m.g}</span><br><span class="s">${m.s} 組 × ${m.r} 下 · ${Math.round(m.pct*100)}%</span></span>
+      <span></span>
+      <span class="w num">${fmt(w,true)}<em>${u()}</em></span></button>`;
+  }).join('');
+  note.innerHTML=`依估算 1RM <b class="num">${dispW(b.e1)} ${u()}</b> 推算，四捨五入到 ${step}${u()}。點一列可直接套用到今日組數。`;
+  box.querySelectorAll('.mixr').forEach(btn=>{
+    btn.onclick=()=>{
+      const w=toKg(parseFloat(btn.dataset.w)), ns=+btn.dataset.s, nr=+btn.dataset.r;
+      en.sets=Array.from({length:ns},()=>({w,r:nr,aw:null,ar:null,ok:false}));
+      save(); drawSets(en,e,e.unitReps||'下',eid); renderAll(); toast('已套用配重');
+    };
+  });
+}
+function drawRest(en){
+  const box=$('rest'); if(!box) return;
+  const opts=[45,60,90,120,150,180];
+  box.innerHTML=opts.map(v=>`<button class="pill ${en.rest===v?'on':''}" data-v="${v}">${v>=60?(v/60)+' 分':v+' 秒'}</button>`).join('');
+  box.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{ en.rest=+p.dataset.v; save(); drawRest(en); });
+}
+
+/* ═══════════════════════════════════════════════════════
+   7. 動作說明
+   ═══════════════════════════════════════════════════════ */
+function openIntro(exId,backTo){
+  const e=BYID[exId]; if(!e) return;
+  const b=bestOf(exId);
+  const mus=ids=>ids.map(id=>M[id]?M[id][0]:id);
+
+  const html=`
+  <div class="bigfig">
+    <figure>${figureSVG(e)}<figcaption>發力姿勢</figcaption></figure>
+    <figure>${figureSVG(e,{neutral:true})}<figcaption>肌群位置</figcaption></figure>
+  </div>
+  <div class="legend">
+    <i><b style="background:var(--accent)"></b>主要肌群</i>
+    <i><b style="background:var(--accent);opacity:.34"></b>協同肌群</i>
+    <i><b style="background:var(--accent2)"></b>出力方向</i>
+  </div>
+
+  <div class="sect">
+    <div class="force">
+      <span class="fdir">${e.force}</span>
+      <span class="fnote">${e.fn}</span>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">目標肌群</span><span class="rule"></span></div>
+    <div class="mchips">
+      ${mus(e.pri).map(m=>`<span class="mchip">${m}</span>`).join('')}
+      ${mus(e.sec).map(m=>`<span class="mchip sec">${m}</span>`).join('')}
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">動作要領</span><span class="rule"></span></div>
+    <ol class="cues">${e.cues.map(c=>`<li><span>${c}</span></li>`).join('')}</ol>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">常見錯誤</span><span class="rule"></span></div>
+    <ul class="bad">${e.bad.map(c=>`<li><span>${c}</span></li>`).join('')}</ul>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">呼吸</span><span class="rule"></span></div>
+    <div class="breath">${e.br}</div>
+  </div>
+
+  <div class="sect">
+    <div class="secth"><span class="lbl">我的紀錄</span><span class="rule"></span></div>
+    <div class="prgrid" style="grid-template-columns:1fr 1fr">
+      <div class="prcell hi"><div class="k">最大重量</div><div class="v num">${dispW(b.w)}<em>${u()}</em></div></div>
+      <div class="prcell"><div class="k">估算 1RM</div><div class="v num">${dispW(b.e1)}<em>${u()}</em></div></div>
+      <div class="lastlog"><span style="color:var(--text3)">${b.wd?`達成於 ${b.wd}`:(b.w?'手動設定':'還沒有紀錄，練完打勾就會出現')}</span></div>
+    </div>
+    <button class="addset" id="setMax" style="margin-top:8px">手動設定最大重量</button>
+  </div>`;
+
+  const foot=backTo
+    ? `<button class="btn" id="backDetail">回到組數</button><button class="btn pri" id="closeIntro">關閉</button>`
+    : `<button class="btn" id="addFromIntro">加入今日課表</button><button class="btn pri" id="closeIntro">關閉</button>`;
+
+  openSheet(`${e.n}　${e.en}`, html, foot, ()=>{
+    $('closeIntro').onclick=closeSheet;
+    if(backTo){ $('backDetail').onclick=()=>openDetail(backTo); }
+    else { $('addFromIntro').onclick=()=>{ addToDay([exId]); closeSheet(); }; }
+    $('setMax').onclick=()=>{
+      const cur=b.w?fmt(toU(b.w),true):'';
+      const v=prompt(`設定「${e.n}」的最大重量（${u()}）`,cur);
+      if(v==null) return;
+      const n=parseFloat(v);
+      if(!isFinite(n)||n<=0){ delete S.manualMax[exId]; } else { S.manualMax[exId]=toKg(n); }
+      save(); openIntro(exId,backTo); renderAll(); toast('已更新最大重量');
+    };
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   8. 動作庫
+   ═══════════════════════════════════════════════════════ */
+let libSel=new Set(), libQ='', libPart='all', libEq='all';
+function openLibrary(){
+  libSel=new Set(); libQ=''; libPart='all'; libEq='all';
+  const html=`
+    <input class="search" id="libQ" placeholder="搜尋動作名稱…" autocomplete="off">
+    <div class="filters" id="libParts"></div>
+    <div class="filters" id="libEqs"></div>
+    <div class="exlist" id="libList"></div>
+    <button class="addset" id="addCustom" style="margin-top:12px">＋ 新增自訂動作</button>`;
+  openSheet('動作庫', html, `<button class="btn gho" id="libCancel">取消</button><button class="btn pri" id="libAdd" disabled>加入</button>`, ()=>{
+    const pf=$('libParts'), ef=$('libEqs');
+    pf.innerHTML=`<button class="pill on" data-v="all">全部部位</button>`+
+      Object.entries(PARTS).map(([k,v])=>`<button class="pill" data-v="${k}">${v.n}</button>`).join('');
+    ef.innerHTML=`<button class="pill on" data-v="all">全部器材</button>`+
+      Object.entries(EQ).map(([k,v])=>`<button class="pill" data-v="${k}">${v}</button>`).join('');
+    pf.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{ libPart=p.dataset.v;
+      pf.querySelectorAll('.pill').forEach(x=>x.classList.toggle('on',x===p)); drawLib(); });
+    ef.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{ libEq=p.dataset.v;
+      ef.querySelectorAll('.pill').forEach(x=>x.classList.toggle('on',x===p)); drawLib(); });
+    $('libQ').oninput=ev=>{ libQ=ev.target.value.trim().toLowerCase(); drawLib(); };
+    $('libCancel').onclick=closeSheet;
+    $('libAdd').onclick=()=>{ addToDay([...libSel]); closeSheet(); };
+    $('addCustom').onclick=addCustomExercise;
+    drawLib();
+  });
+}
+function drawLib(){
+  const list=$('libList'); if(!list) return;
+  const res=DB.filter(e=>
+    (libPart==='all'||e.part===libPart) &&
+    (libEq==='all'||e.eq===libEq) &&
+    (!libQ||e.n.toLowerCase().includes(libQ)||(e.en||'').toLowerCase().includes(libQ))
+  );
+  if(!res.length){ list.innerHTML=`<div class="nores">找不到符合的動作<br>可以用下方「新增自訂動作」建立</div>`; }
+  else list.innerHTML=res.map(e=>`<button class="exrow ${libSel.has(e.id)?'sel':''}" data-id="${e.id}">
+      <span class="exthumb">${figureSVG(e,{small:true,arrows:false})}</span>
+      <span><span class="n">${e.n}</span><span class="m"><i class="cdot" style="background:${PARTS[e.part].c}"></i>${PARTS[e.part].n} · ${EQ[e.eq]} · ${e.force}</span></span>
+      <span class="tick"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+    </button>`).join('');
+  list.querySelectorAll('.exrow').forEach(r=>r.onclick=()=>{
+    const id=r.dataset.id;
+    if(libSel.has(id)) libSel.delete(id); else libSel.add(id);
+    r.classList.toggle('sel');
+    const btn=$('libAdd');
+    btn.disabled=libSel.size===0;
+    btn.textContent=libSel.size?`加入 ${libSel.size} 個動作`:'加入';
+  });
+}
+function addToDay(ids){
+  if(!ids.length) return;
+  const dd=ensureDay(sel);
+  ids.forEach(id=>{
+    const en=mkEntry(id); if(!en) return;
+    const b=bestOf(id);
+    if(b.w) en.sets.forEach(s=>s.w=Math.round((b.w*0.8)/2.5)*2.5||b.w);
+    dd.entries.push(en);
+  });
+  save(); renderAll(); toast(`已加入 ${ids.length} 個動作`);
+}
+function addCustomExercise(){
+  const n=prompt('動作名稱'); if(!n) return;
+  const partKeys=Object.keys(PARTS);
+  const pi=prompt(`部位（輸入編號）\n${partKeys.map((k,i)=>`${i+1}. ${PARTS[k].n}`).join('\n')}`,'1');
+  const part=partKeys[(parseInt(pi,10)||1)-1]||'chest';
+  const eqKeys=Object.keys(EQ);
+  const ei=prompt(`器材（輸入編號）\n${eqKeys.map((k,i)=>`${i+1}. ${EQ[k]}`).join('\n')}`,'1');
+  const eq=eqKeys[(parseInt(ei,10)||1)-1]||'barbell';
+  const e={id:'c_'+uid(), n, en:'', part, eq, pri:[], sec:[], force:'自訂',
+    fn:'自訂動作，尚未填寫發力說明。', cues:['依你自己的動作標準執行'], bad:['注意不要用代償姿勢完成'],
+    br:'發力時吐氣，回位時吸氣', f:{v:'front',p:P({}),eq:[],ar:[]}, d:[3,10,90], custom:true};
+  DB.push(e); BYID[e.id]=e; S.custom.push(e); save();
+  toast('已新增到動作庫'); drawLib();
+}
+
+/* ═══════════════════════════════════════════════════════
+   9. 範本 / 複製 / 設定
+   ═══════════════════════════════════════════════════════ */
+function openTemplates(){
+  const rows=S.templates.map(t=>{
+    const names=t.entries.map(en=>BYID[en.ex]?BYID[en.ex].n:'?').join('、');
+    return `<div class="row" data-t="${t.id}">
+      <span class="swatch" style="background:${t.accent||'var(--accent)'}"></span>
+      <span class="g"><span class="t">${t.name}</span><span class="s">${t.entries.length} 個動作 · ${names}</span></span>
+      <button class="act" data-del="${t.id}" aria-label="刪除範本"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div>`;
+  }).join('');
+  const html=(S.templates.length?`<div class="rows">${rows}</div>`:`<div class="nores">還沒有範本<br>在有課表的日子按「存成範本」就會出現在這裡</div>`)
+    +`<div class="hintbox">套用範本會把範本裡的動作<b>附加</b>到 ${sel} 的課表後面，不會覆蓋既有內容。</div>`;
+  openSheet('課表範本', html, `<button class="btn pri" id="tplClose" style="flex:1">關閉</button>`, ()=>{
+    $('tplClose').onclick=closeSheet;
+    $('sheetBody').querySelectorAll('.row').forEach(r=>{
+      r.onclick=ev=>{
+        if(ev.target.closest('[data-del]')){
+          const id=ev.target.closest('[data-del]').dataset.del;
+          S.templates=S.templates.filter(t=>t.id!==id); save(); openTemplates(); toast('已刪除範本'); return;
+        }
+        const t=S.templates.find(x=>x.id===r.dataset.t); if(!t) return;
+        const dd=ensureDay(sel);
+        t.entries.forEach(en=>dd.entries.push(cloneEntry(en)));
+        save(); closeSheet(); renderAll(); toast(`已套用「${t.name}」`);
+      };
+    });
+  });
+}
+function saveAsTemplate(){
+  const dd=dayOf(sel);
+  if(!dd.entries.length){ toast('這天沒有課表'); return; }
+  const parts=[...new Set(dd.entries.map(e=>BYID[e.ex]&&BYID[e.ex].part).filter(Boolean))];
+  const def=parts.map(p=>PARTS[p].n).join('') + '日';
+  const name=prompt('範本名稱',def); if(!name) return;
+  S.templates.push({id:uid(), name, accent:PARTS[parts[0]]?PARTS[parts[0]].c:'#E5A44C', entries:dd.entries.map(cloneEntry)});
+  save(); toast('已存成範本');
+}
+function openCopy(){
+  const keys=Object.keys(S.days).filter(k=>k!==sel&&S.days[k].entries.length).sort().reverse().slice(0,14);
+  const html=keys.length?`<div class="rows">${keys.map(k=>{
+      const d=parseISO(k), dd=S.days[k];
+      const names=dd.entries.map(en=>BYID[en.ex]?BYID[en.ex].n:'?').join('、');
+      const parts=[...new Set(dd.entries.map(e=>BYID[e.ex]&&BYID[e.ex].part).filter(Boolean))];
+      return `<div class="row" data-k="${k}">
+        <span class="swatch" style="background:${parts[0]?PARTS[parts[0]].c:'var(--line2)'}"></span>
+        <span class="g"><span class="t num">${d.getMonth()+1}/${d.getDate()} <span style="font-family:inherit;font-weight:500;color:var(--text3);font-size:12px">週${WD[d.getDay()]}</span></span>
+        <span class="s">${dd.entries.length} 個動作 · ${names}</span></span></div>`;
+    }).join('')}</div>`
+    : `<div class="nores">還沒有其他日期的課表</div>`;
+  openSheet('複製其他日課表', html, `<button class="btn pri" id="cpClose" style="flex:1">關閉</button>`, ()=>{
+    $('cpClose').onclick=closeSheet;
+    $('sheetBody').querySelectorAll('.row').forEach(r=>r.onclick=()=>{
+      const src=S.days[r.dataset.k]; const dd=ensureDay(sel);
+      src.entries.forEach(en=>dd.entries.push(cloneEntry(en)));
+      save(); closeSheet(); renderAll(); toast('已複製課表');
+    });
+  });
+}
+function clearDay(){
+  const dd=dayOf(sel);
+  if(!dd.entries.length) return;
+  if(!confirm(`確定要清空 ${sel} 的全部 ${dd.entries.length} 個動作？`)) return;
+  delete S.days[sel]; save(); renderAll(); toast('已清空');
+}
+
+let dlAvail=null;
+async function initDownloads(){
+  try{ dlAvail = (window.claude&&typeof window.claude.use==='function') ? await window.claude.use('downloads') : null; }
+  catch(_){ dlAvail=null; }
+}
+// 檔名維持 ASCII：Chromium 下載時會把中文檔名整個丟掉，變成無副檔名的 "download"
+function backupName(){ return `iron-log-backup-${iso(new Date())}.json`; }
+async function exportBackup(){
+  const data=JSON.stringify(S,null,2);
+  if(dlAvail){
+    try{ await dlAvail.save({filename:backupName(),data}); toast('已匯出'); return; }
+    catch(err){ if(err&&err.code==='declined'){ toast('已取消匯出'); return; } }
+  }
+  try{
+    const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+    const a=document.createElement('a');
+    a.href=url; a.download=backupName(); a.style.display='none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    toast('已匯出備份檔');
+  }catch(_){ toast('這個環境不能下載，請改用「顯示備份文字」'); }
+}
+function applyBackup(text){
+  let o;
+  try{ o=JSON.parse(text); }catch(_){ toast('備份格式不正確'); return; }
+  if(!o||o.version!==1||!o.days){ toast('備份格式不正確'); return; }
+  const days=Object.keys(o.days).length;
+  if(!confirm(`還原會覆蓋目前所有資料，換成備份裡的 ${days} 天課表。確定嗎？`)) return;
+  Store.write(KEY,JSON.stringify(o));
+  load(); closeSheet(); renderAll(); updateWarn(); toast('已還原備份');
+}
+function openSettings(){
+  const total=Object.keys(S.days).length;
+  const logged=Object.values(S.days).reduce((a,d)=>a+d.entries.reduce((b,e)=>b+e.sets.filter(s=>s.ok).length,0),0);
+  const html=`
+  <div class="sect">
+    <div class="secth"><span class="lbl">重量單位</span><span class="rule"></span></div>
+    <div class="restrow">
+      <button class="pill ${u()==='kg'?'on':''}" data-u="kg">公斤 kg</button>
+      <button class="pill ${u()==='lb'?'on':''}" data-u="lb">磅 lb</button>
+    </div>
+    <div class="hintbox">紀錄一律以公斤儲存，切換單位只改變顯示與輸入方式，不會影響既有資料。</div>
+  </div>
+  <div class="sect" id="dataSect">
+    <div class="secth"><span class="lbl">資料</span><span class="rule"></span></div>
+    <div class="hintbox" style="margin-top:0">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+        <i style="width:7px;height:7px;border-radius:99px;flex:none;background:${Store.ok?'var(--ok)':'var(--warnText)'}"></i>
+        <b style="color:var(--text)">${Store.ok?'保存正常':'無法保存'}</b>
+        ${Store.ok?`<span style="margin-left:auto;font-size:11px">${lastSaved?`最後儲存 ${String(lastSaved.getHours()).padStart(2,'0')}:${String(lastSaved.getMinutes()).padStart(2,'0')}`:''} · ${(Store.size()/1024).toFixed(1)} KB</span>`:''}
+      </div>
+      ${Store.ok
+        ? `目前有 <b>${total}</b> 天課表、<b>${logged}</b> 組完成紀錄。<br>資料只存在這台裝置的這個瀏覽器裡，換手機或清除瀏覽器資料就會消失，建議定期匯出備份。`
+        : `${Store.why}。<br>目前的 <b>${total}</b> 天課表只存在記憶體裡，<b>關掉分頁就會全部消失</b>。請立刻用下面的按鈕匯出，換到一般瀏覽器分頁再還原。`}
+    </div>
+    <div class="restrow" style="margin-top:10px">
+      <button class="btn ${Store.ok?'':'pri'}" id="expFile">匯出備份檔</button>
+      <button class="btn" id="expText">顯示備份文字</button>
+      <button class="btn" id="impFile">從檔案還原</button>
+      <button class="btn" id="impText">貼上備份文字</button>
+    </div>
+    <input type="file" id="impInput" accept="application/json,.json" hidden>
+    <div id="ioBox"></div>
+  </div>
+  <div class="sect">
+    <div class="secth"><span class="lbl">危險操作</span><span class="rule"></span></div>
+    <button class="btn dgr" id="wipe">清除全部資料</button>
+  </div>`;
+  openSheet('設定', html, `<button class="btn pri" id="setClose" style="flex:1">關閉</button>`, ()=>{
+    $('setClose').onclick=closeSheet;
+    $('sheetBody').querySelectorAll('[data-u]').forEach(p=>p.onclick=()=>{
+      S.settings.unit=p.dataset.u; save(); openSettings(); renderAll();
+    });
+    const io=$('ioBox');
+    $('expFile').onclick=exportBackup;
+    $('expText').onclick=()=>{
+      io.innerHTML=`<textarea class="backup" readonly id="ta">${JSON.stringify(S)}</textarea>
+        <div class="hintbox" style="margin-top:6px">全選複製這段文字，存到你的備忘錄即可。</div>`;
+      $('ta').focus(); $('ta').select();
+    };
+    $('impFile').onclick=()=>$('impInput').click();
+    $('impInput').onchange=ev=>{
+      const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=()=>applyBackup(String(r.result));
+      r.onerror=()=>toast('檔案讀取失敗');
+      r.readAsText(f);
+      ev.target.value='';
+    };
+    $('impText').onclick=()=>{
+      io.innerHTML=`<textarea class="backup" id="ta" placeholder="把備份文字貼在這裡…"></textarea>
+        <div class="restrow" style="margin-top:8px"><button class="btn pri" id="doImp">還原</button></div>`;
+      $('doImp').onclick=()=>applyBackup($('ta').value);
+    };
+    $('wipe').onclick=()=>{
+      if(!confirm('這會刪除全部課表、紀錄與範本，且無法復原。確定嗎？')) return;
+      try{ localStorage.removeItem(KEY); localStorage.removeItem(BAK); }catch(_){}
+      Store.write(KEY,''); load(); closeSheet(); renderAll(); toast('已清除全部資料');
+    };
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   10. 互動：FAB / 滑動 / 鍵盤
+   ═══════════════════════════════════════════════════════ */
+const fw=$('fabwrap');
+$('fab').onclick=e=>{ e.stopPropagation(); fw.classList.toggle('open'); };
+document.addEventListener('click',()=>fw.classList.remove('open'));
+$('miniLib').onclick=e=>{e.stopPropagation();fw.classList.remove('open');openLibrary();};
+$('miniTpl').onclick=e=>{e.stopPropagation();fw.classList.remove('open');openTemplates();};
+$('miniCopy').onclick=e=>{e.stopPropagation();fw.classList.remove('open');openCopy();};
+$('btnSettings').onclick=openSettings;
+$('btnPrev').onclick=()=>{ weekAnchor=iso(addDays(parseISO(weekAnchor),-7)); sel=iso(addDays(parseISO(sel),-7)); renderAll(); };
+$('btnNext').onclick=()=>{ weekAnchor=iso(addDays(parseISO(weekAnchor),7)); sel=iso(addDays(parseISO(sel),7)); renderAll(); };
+$('btnToday').onclick=()=>{ sel=iso(new Date()); weekAnchor=sel; renderAll(); };
+
+function shiftDay(n){
+  sel=iso(addDays(parseISO(sel),n));
+  if(iso(weekStart(sel))!==iso(weekStart(weekAnchor))) weekAnchor=sel;
+  renderAll();
+}
+let tsx=0,tsy=0,tracking=false;
+const mainEl=$('main');
+mainEl.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1) return;
+  tsx=e.touches[0].clientX; tsy=e.touches[0].clientY; tracking=true;
+},{passive:true});
+mainEl.addEventListener('touchend',e=>{
+  if(!tracking) return; tracking=false;
+  const t=e.changedTouches[0], dx=t.clientX-tsx, dy=t.clientY-tsy;
+  if(Math.abs(dx)>52 && Math.abs(dx)>Math.abs(dy)*1.6) shiftDay(dx<0?1:-1);
+},{passive:true});
+
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea')) return;
+  if($('sheet').classList.contains('on')){ if(e.key==='Escape') closeSheet(); return; }
+  if(e.key==='ArrowLeft') shiftDay(-1);
+  else if(e.key==='ArrowRight') shiftDay(1);
+  else if(e.key==='t'||e.key==='T'){ sel=iso(new Date()); weekAnchor=sel; renderAll(); }
+});
+
+$('warnAct').onclick=()=>{
+  openSettings();
+  setTimeout(()=>{ const s=$('dataSect'); if(s) s.scrollIntoView({block:'start',behavior:'smooth'}); },60);
+};
+
+/* ── boot ─────────────────────────────────────────────── */
+load();
+renderAll();
+updateWarn();
+initDownloads();
+if(recovered) setTimeout(()=>toast('主檔讀不到，已從每日備份回復'),500);
+
+/* 健身房常常沒訊號 —— 讓頁面離線也打得開 */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>

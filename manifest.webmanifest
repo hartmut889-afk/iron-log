@@ -1,0 +1,17 @@
+{
+  "name": "鐵日誌",
+  "short_name": "鐵日誌",
+  "description": "個人健身課表與訓練紀錄：規劃每日訓練、記錄最大重量與組數，內建 40 個動作的圖示、出力方向與動作要領。",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#141412",
+  "theme_color": "#141412",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
