@@ -257,8 +257,12 @@ main{padding:18px 16px 0;animation:slidein .22s ease}
 
 /* ── intro sheet ─────────────────────────────────────── */
 .bigfig{background:var(--sunken);border:1px solid var(--line);border-radius:16px;padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.bigfig.one{grid-template-columns:1fr}
 .bigfig figure{margin:0;display:flex;flex-direction:column;align-items:center}
 .bigfig svg{width:100%;height:auto;max-height:250px;display:block}
+.bigfig.one .artwrap{position:relative;width:100%;aspect-ratio:3/4;max-height:56dvh}
+.bigfig.one .artwrap svg.fig{max-height:none}
+.bigfig.one .artimg{object-fit:contain}
 .bigfig figcaption{font-size:10px;letter-spacing:.14em;color:var(--text3);padding-bottom:5px}
 .legend{display:flex;gap:14px;justify-content:center;padding:8px 0 2px;flex-wrap:wrap}
 .legend i{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);font-style:normal}
@@ -790,6 +794,11 @@ const DB = [
     eq:['floor'], ar:[{at:'hip',d:[0,-1],l:18}]},
  d:[3,40,45], unitReps:'秒'}
 ];
+/* 有解剖插畫的動作（檔名同 id，放在 img/<id>.webp）。
+   沒列在這裡的動作會用 figureSVG() 畫的人形示意圖，兩者可以並存。 */
+const ART = new Set(['bench','squat','deadlift','pullup','lateral','plank']);
+DB.forEach(e=>{ if(ART.has(e.id)) e.art=e.id; });
+
 const BYID = Object.fromEntries(DB.map(e=>[e.id,e]));
 
 /* ═══════════════════════════════════════════════════════
@@ -947,6 +956,18 @@ function gear(kind,j){
   return g.join('');
 }
 
+/* 插畫層：SVG 永遠先畫在底下當後備，插畫載入成功才蓋上去。
+   圖檔 404（離線未快取、Artifact 版沒有 img/、檔案漏掉）時 onerror 把 <img>
+   移掉，底下的 SVG 就自然露出來 —— 不需要任何 JS 接線，也不會出現破圖。 */
+function artLayer(ex, opt){
+  opt = opt || {};
+  const svg = figureSVG(ex, opt);
+  if(!ex.art) return svg;
+  const cls = 'artimg' + (opt.small ? ' sm' : '');
+  return `<span class="artwrap">${svg}<img class="${cls}" src="img/${ex.art}.webp" alt="${ex.n} 動作示意"
+    loading="lazy" decoding="async" onerror="this.remove()"></span>`;
+}
+
 const ARROW_W=2.2;
 function figureSVG(ex, opt){
   opt=opt||{};
@@ -1020,6 +1041,9 @@ svg.fig .cab{stroke:var(--figLine);opacity:.75;fill:none}
 svg.fig .ar{stroke:var(--accent2);fill:none;opacity:.95}
 svg.fig .arh{fill:var(--accent2);stroke:none;opacity:.95}
 svg.fig.sm .ar,svg.fig.sm .arh{opacity:.85}
+.artwrap{position:relative;display:block;width:100%;height:100%}
+.artwrap svg.fig{position:absolute;inset:0;width:100%;height:100%}
+.artimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 </style>
 
 <script>
@@ -1233,7 +1257,7 @@ function renderDay(){
       const e=BYID[en.ex]; if(!e) return;
       const done=en.sets.filter(s=>s.ok).length;
       h+=`<button class="card ${done===en.sets.length?'complete':''}" data-entry="${en.id}">
-        <span class="thumb" data-intro="${e.id}">${figureSVG(e,{small:true})}</span>
+        <span class="thumb" data-intro="${e.id}">${artLayer(e,{small:true})}</span>
         <span class="cbody">
           <span class="cname">${e.n}</span>
           <span class="cmeta"><i class="cdot" style="background:${PARTS[e.part].c}"></i><span class="cequip">${PARTS[e.part].n} · ${EQ[e.eq]}</span></span>
@@ -1316,7 +1340,7 @@ function openDetail(eid){
 
   const html=`
   <div class="dtop">
-    <div class="dfig" data-intro="${e.id}" role="button" tabindex="0">${figureSVG(e)}<span class="hint">看動作說明</span></div>
+    <div class="dfig" data-intro="${e.id}" role="button" tabindex="0">${artLayer(e)}<span class="hint">看動作說明</span></div>
     <div class="prgrid">
       <div class="prcell hi"><div class="k">最大重量</div><div class="v num">${dispW(b.w)}<em>${u()}</em></div></div>
       <div class="prcell"><div class="k">估算 1RM</div><div class="v num">${dispW(b.e1)}<em>${u()}</em></div></div>
@@ -1451,15 +1475,18 @@ function openIntro(exId,backTo){
   const mus=ids=>ids.map(id=>M[id]?M[id][0]:id);
 
   const html=`
-  <div class="bigfig">
-    <figure>${figureSVG(e)}<figcaption>發力姿勢</figcaption></figure>
-    <figure>${figureSVG(e,{neutral:true})}<figcaption>肌群位置</figcaption></figure>
-  </div>
-  <div class="legend">
-    <i><b style="background:var(--accent)"></b>主要肌群</i>
-    <i><b style="background:var(--accent);opacity:.34"></b>協同肌群</i>
-    <i><b style="background:var(--accent2)"></b>出力方向</i>
-  </div>
+  ${e.art
+    ? `<div class="bigfig one"><figure>${artLayer(e)}<figcaption>發力姿勢與作用肌群</figcaption></figure></div>
+       <div class="legend"><i><b style="background:var(--accent2)"></b>最亮處為主要發力肌群</i></div>`
+    : `<div class="bigfig">
+        <figure>${figureSVG(e)}<figcaption>發力姿勢</figcaption></figure>
+        <figure>${figureSVG(e,{neutral:true})}<figcaption>肌群位置</figcaption></figure>
+      </div>
+      <div class="legend">
+        <i><b style="background:var(--accent)"></b>主要肌群</i>
+        <i><b style="background:var(--accent);opacity:.34"></b>協同肌群</i>
+        <i><b style="background:var(--accent2)"></b>出力方向</i>
+      </div>`}
 
   <div class="sect">
     <div class="force">
@@ -1558,7 +1585,7 @@ function drawLib(){
   );
   if(!res.length){ list.innerHTML=`<div class="nores">找不到符合的動作<br>可以用下方「新增自訂動作」建立</div>`; }
   else list.innerHTML=res.map(e=>`<button class="exrow ${libSel.has(e.id)?'sel':''}" data-id="${e.id}">
-      <span class="exthumb">${figureSVG(e,{small:true,arrows:false})}</span>
+      <span class="exthumb">${artLayer(e,{small:true,arrows:false})}</span>
       <span><span class="n">${e.n}</span><span class="m"><i class="cdot" style="background:${PARTS[e.part].c}"></i>${PARTS[e.part].n} · ${EQ[e.eq]} · ${e.force}</span></span>
       <span class="tick"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
     </button>`).join('');

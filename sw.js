@@ -1,7 +1,7 @@
 /* 鐵日誌 service worker — 讓頁面在健身房沒訊號時也打得開。
    HTML 走 network-first（推新版上去，下次連網就會換新）；
    圖示等靜態檔走 cache-first。改版時把 VERSION 加一。 */
-const VERSION = 'ironlog-v1';
+const VERSION = 'ironlog-v2';
 const SHELL = [
   './',
   './index.html',
