@@ -47,14 +47,27 @@ its equipment should span at least 85% of the frame in the longer direction, wit
 only a small even margin. Do not leave large empty areas. Consistent figure scale
 across the set. Flat solid charcoal background with no environment or scenery;
 at most a subtle soft contact shadow under the supporting points.
+THE BACKGROUND IS ONE UNBROKEN FIELD OF CHARCOAL. For floor exercises do NOT draw
+a ground plane, floor slab, platform, mat, podium, horizon line or any lighter
+rectangle behind or beneath the figure — the body simply sits on the flat charcoal
+with a soft shadow. The background must look identical in every image of the set.
 
 EQUIPMENT ACCURACY: barbells are olympic bars loaded with large circular weight
 plates on both ends. Dumbbells have a short handle with a weight head at each end.
 Grip width, plate count and joint angles must be anatomically plausible.
 
+THE HEAD IS FEATURELESS — this matters: the head is present, correctly proportioned
+and properly attached at the neck, but it is a SMOOTH BLANK ANATOMICAL FORM like a
+sculptor's mannequin. Draw NO face: no eyes, no eyebrows, no nose, no mouth, no ear
+detail, no facial muscles, no expression, no hair. Just the clean shape of the skull
+and jaw. The head orientation still shows which way the athlete is looking.
+The head must be the SAME WARM BRASS TONE as the rest of the body — never grey,
+white, pale or a different material from the body it is attached to.
+
 ANATOMY — check every one of these before finishing:
-• The head, face and neck are clearly visible, correctly proportioned and properly
-  attached to the shoulders. Never omit, hide or crop the head.
+• The head and neck are clearly visible, correctly proportioned and properly
+  attached to the shoulders. Never omit, hide or crop the head — but keep it
+  featureless as described above.
 • Exactly one head, two arms, two hands, two legs, two feet. Nothing extra, nothing missing.
 • Both hands grip symmetrically, at equal distance from the centre of the bar, and
   are actually closed around it.
@@ -70,17 +83,23 @@ const SET = {
     file: 'bench.png',
     what: 'a barbell bench press at the mid-point of the press',
     detail: `The athlete lies on their back on a flat bench, seen from a three-quarter side angle.
-THE HEAD MUST BE DRAWN: it rests on the surface of the bench with the face clearly
-visible looking up toward the ceiling, neck attached naturally to the shoulders. Never
-let the barbell, the arms or the frame edge hide or replace the head.
-Shoulder blades pinned to the bench, feet flat on the floor, a slight natural arch in the lower back.
+THE HEAD MUST BE DRAWN: it rests on the surface of the bench, tilted up toward the
+ceiling, neck attached naturally to the shoulders. Never let the barbell, the arms or
+the frame edge hide or replace the head. Keep it featureless, as the style requires.
+The bench is a full-length flat weight bench on upright legs, long enough to support the
+head, back and hips together; the whole torso lies along it and both feet are planted flat
+on the floor either side. The body must never appear to float without support.
+Shoulder blades pinned to the bench, a slight natural arch in the lower back.
 Both hands grip a straight olympic barbell slightly wider than shoulder width, elbows tucked to about
 45 degrees from the torso, the bar directly above the mid-chest. Target muscle: the chest (pectorals).`
   },
   inclinedb: {
     file: 'inclinedb.png',
     what: 'an incline dumbbell press at the top of the press',
-    detail: `Three-quarter side view. The athlete lies back on a bench set to roughly 30 degrees of incline,
+    detail: `Three-quarter side view. THE BENCH MUST CLEARLY BE AN INCLINE BENCH: its backrest is visibly
+tilted up at about 30-40 degrees from horizontal, so the athlete is reclined at an angle rather than lying
+flat — the difference from a flat bench press must be obvious at a glance. The athlete lies back along that
+angled backrest with the hips lower than the shoulders,
 head resting on the bench and clearly visible, feet flat on the floor. One dumbbell in each hand, both arms
 pressed up and slightly inward above the upper chest, elbows nearly straight but not locked, palms facing
 forward. Target muscle: the upper portion of the chest, just below the collarbone.`
@@ -195,8 +214,10 @@ tracking out over the toes, heels flat on the floor. Target muscles: quadriceps 
   frontsquat: {
     file: 'frontsquat.png',
     what: 'a front squat at the bottom position',
-    detail: `Three-quarter front view. An olympic barbell rests across the front of the shoulders on the collarbone
-and front deltoids, both elbows driven high and pointing forward, hands supporting the bar with fingertips. The
+    detail: `Three-quarter front view. THIS IS A FRONT-RACK POSITION, NOT A BACK SQUAT: the olympic barbell rests
+across the FRONT of the shoulders, sitting on the collarbone and front deltoids in front of the throat. BOTH
+ELBOWS ARE DRIVEN HIGH AND POINT STRAIGHT FORWARD at shoulder height, upper arms almost parallel to the floor,
+hands open behind the bar supporting it with the fingertips. The bar must never be behind the neck. The
 athlete is squatted down until the thighs are just below parallel, torso almost vertical, heels flat.
 Target muscle: the quadriceps at the front of the thighs.`
   },

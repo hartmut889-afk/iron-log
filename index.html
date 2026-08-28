@@ -794,10 +794,9 @@ const DB = [
     eq:['floor'], ar:[{at:'hip',d:[0,-1],l:18}]},
  d:[3,40,45], unitReps:'秒'}
 ];
-/* 有解剖插畫的動作（檔名同 id，放在 img/<id>.webp）。
-   沒列在這裡的動作會用 figureSVG() 畫的人形示意圖，兩者可以並存。 */
-const ART = new Set(['bench','squat','deadlift','pullup','lateral','plank']);
-DB.forEach(e=>{ if(ART.has(e.id)) e.art=e.id; });
+/* 內建 40 個動作都有解剖插畫（img/<id>.webp，檔名同 id）。
+   自訂動作沒有圖，會退回 figureSVG() 畫的人形示意圖；插畫載不到時也一樣。 */
+DB.forEach(e=>{ if(!e.custom) e.art=e.id; });
 
 const BYID = Object.fromEntries(DB.map(e=>[e.id,e]));
 
