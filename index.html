@@ -225,8 +225,11 @@ main{padding:18px 16px 0;animation:slidein .22s ease}
 .setrow{display:grid;grid-template-columns:26px 1fr 12px 1fr 38px 26px;gap:6px;align-items:center;
   background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:6px 7px}
 .setrow.on{border-color:color-mix(in srgb,var(--ok) 48%,var(--line));background:var(--okDim)}
+.setrow.warm{opacity:.62}
+.setrow.warm .setno{font-size:10px;letter-spacing:.02em}
 .setno{font-size:11px;color:var(--text3);text-align:center;font-weight:600}
 .setrow.on .setno{color:var(--ok)}
+.setrow.amrap .fld input[data-f="r"]::placeholder{color:var(--accent);font-weight:700;opacity:1}
 .fld{position:relative}
 .fld input{width:100%;background:var(--sunken);border:1px solid var(--line);border-radius:8px;padding:7px 28px 7px 9px;font-size:15px;font-weight:600;
   font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;text-align:right;-moz-appearance:textfield}
@@ -243,14 +246,18 @@ main{padding:18px 16px 0;animation:slidein .22s ease}
 .addset:hover{color:var(--accent);border-color:var(--accent)}
 
 .mix{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.mixr{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--surface);padding:9px 12px;text-align:left;width:100%}
+.mixr{display:block;background:var(--surface);padding:10px 13px 11px;text-align:left;width:100%}
 .mixr:hover{background:var(--raised)}
-.mixr .g{font-size:12.5px;font-weight:600}
+.mixr .g{font-size:13.5px;font-weight:700}
 .mixr .s{font-size:11.5px;color:var(--text3)}
+.mixr .plan{display:inline-block;margin-top:6px;font-size:13px;font-weight:600;color:var(--accent);letter-spacing:-.01em}
 .mixr .w{font-size:15px;font-weight:700}
 .mixr .w em{font-style:normal;font-size:10px;color:var(--text3);font-weight:500;margin-left:2px}
 .mixnote{font-size:11.5px;color:var(--text3);margin-top:8px;line-height:1.6}
 
+.maxform{margin-top:10px;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:12px}
+.maxrow{display:grid;grid-template-columns:1fr 14px 1fr;gap:8px;align-items:center}
+.maxrow .fld input{text-align:right}
 .restrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pill{border:1px solid var(--line2);border-radius:99px;padding:5px 12px;font-size:12.5px;font-weight:600;color:var(--text2)}
 .pill.on{background:var(--accentDim);border-color:var(--accent);color:var(--accent)}
@@ -316,8 +323,11 @@ ul.bad li::before{content:"×";color:#D2705E;font-weight:700;text-align:center;p
 .backup{width:100%;min-height:120px;background:var(--sunken);border:1px solid var(--line);border-radius:11px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:11px;resize:vertical;margin-top:8px}
 
 .toast{position:fixed;left:50%;bottom:96px;translate:-50% 0;z-index:80;background:var(--raised);border:1px solid var(--line2);
-  border-radius:11px;padding:9px 16px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,translate .2s}
-.toast.on{opacity:1;translate:-50% -6px}
+  border-radius:11px;padding:9px 16px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,translate .2s;
+  display:flex;align-items:center;gap:12px;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;translate:-50% -6px;pointer-events:auto}
+.toast .tact{flex:none;color:var(--accent);font-weight:700;font-size:13px;padding:3px 4px;border-radius:6px}
+.toast .tact:hover{background:var(--accentDim)}
 
 @media (max-width:360px){
   .dayttl{font-size:23px}
@@ -1122,6 +1132,12 @@ function load(){
     S=s;
     S.settings=S.settings||{unit:'kg'};
     S.days=S.days||{}; S.templates=S.templates||[]; S.custom=S.custom||[]; S.manualMax=S.manualMax||{};
+    // 舊版把手動最大重量存成單一數字，補上次數欄位（數字視為 1RM）
+    for(const k in S.manualMax){
+      const v=S.manualMax[k];
+      if(typeof v==='number') S.manualMax[k]= v>0 ? {w:v,r:1} : undefined;
+      if(!S.manualMax[k]||!(S.manualMax[k].w>0)) delete S.manualMax[k];
+    }
     S.custom.forEach(c=>{ if(!BYID[c.id]) { DB.push(c); BYID[c.id]=c; } });
     if(recovered) save();   // 把回復後的內容寫回主檔，別讓壞掉的主檔留著
   }
@@ -1147,7 +1163,11 @@ function updateWarn(){
   el.hidden=false;
   $('warnWhy').textContent=Store.why+'，關掉分頁就會消失。請立刻匯出備份。';
 }
-function cloneEntry(en){ return {id:uid(), ex:en.ex, rest:en.rest, sets:en.sets.map(s=>({w:s.w,r:s.r,aw:null,ar:null,ok:false}))}; }
+function cloneEntry(en){
+  return {id:uid(), ex:en.ex, rest:en.rest,
+    sets:en.sets.map(s=>({w:s.w, r:s.r, aw:null, ar:null, ok:false,
+      ...(s.amrap?{amrap:true}:{}), ...(s.warm?{warm:true}:{})}))};
+}
 function dayOf(k){ return S.days[k]||{entries:[]}; }
 function ensureDay(k){ if(!S.days[k]) S.days[k]={entries:[]}; return S.days[k]; }
 function pruneDay(k){ if(S.days[k]&&!S.days[k].entries.length) delete S.days[k]; }
@@ -1161,6 +1181,11 @@ function fmt(n,dp){ if(n==null||!isFinite(n)) return '–'; const r=Math.round(n
 const dispW=kg=>fmt(toU(kg),true);
 
 /* 由所有紀錄推導最佳成績 */
+/* Epley 在高次數會嚴重高估：力竭組做到 65kg×18 會算出 1RM 104kg，
+   然後污染之後所有配重。超過這個次數的組只算「最大重量」，不列入 1RM 推估。 */
+const E1_MAX_REPS = 12;
+const epley = (kg,rp) => kg*(1+rp/30);
+
 function bestOf(exId, before){
   let w=0,e1=0,wd=null,ed=null,lastDate=null,lastSets=null;
   for(const k of Object.keys(S.days)){
@@ -1168,19 +1193,28 @@ function bestOf(exId, before){
       if(en.ex!==exId) continue;
       let any=false;
       for(const st of en.sets){
-        if(!st.ok) continue;
+        if(!st.ok||st.warm) continue;          // 熱身組不算紀錄
         const kg=st.aw!=null?st.aw:st.w, rp=st.ar!=null?st.ar:st.r;
         if(!kg||!rp) continue;
         any=true;
         if(kg>w){w=kg;wd=k;}
-        const e=kg*(1+rp/30);
-        if(e>e1){e1=e;ed=k;}
+        if(rp<=E1_MAX_REPS){
+          const e=epley(kg,rp);
+          if(e>e1){e1=e;ed=k;}
+        }
       }
-      if(any&&(!before||k<before)&&(!lastDate||k>lastDate)){ lastDate=k; lastSets=en.sets.filter(s=>s.ok); }
+      if(any&&(!before||k<before)&&(!lastDate||k>lastDate)){
+        lastDate=k; lastSets=en.sets.filter(s=>s.ok&&!s.warm);
+      }
     }
   }
+  // 手動輸入的最大重量同樣要參與 1RM 推估，否則沒做過任何一組就永遠拿不到配重建議
   const mm=S.manualMax[exId];
-  if(mm&&mm>w){ w=mm; wd=null; }
+  if(mm&&mm.w>0){
+    if(mm.w>w){ w=mm.w; wd=null; }
+    const me=epley(mm.w, Math.min(mm.r||1, E1_MAX_REPS));
+    if(me>e1){ e1=me; ed=null; }
+  }
   return {w:w||null,e1:e1||null,wd,ed,lastDate,lastSets};
 }
 
@@ -1223,13 +1257,15 @@ function ringSVG(done,total){
 
 function schemeLine(en){
   const e=BYID[en.ex]; const ru=e&&e.unitReps||'下';
-  const ws=en.sets.map(s=>s.aw!=null?s.aw:s.w).filter(v=>v!=null&&v>0);
-  const rs=en.sets.map(s=>s.ar!=null?s.ar:s.r).filter(v=>v!=null);
+  const work=en.sets.filter(s=>!s.warm);            // 摘要只講正式組
+  const ws=work.map(s=>s.aw!=null?s.aw:s.w).filter(v=>v!=null&&v>0);
+  const rs=work.map(s=>s.ar!=null?s.ar:s.r).filter(v=>v!=null);
   const same=v=>v.length&&v.every(x=>x===v[0]);
   const rTxt=same(rs)?`${rs[0]}`:(rs.length?`${Math.min(...rs)}–${Math.max(...rs)}`:'–');
-  if(!ws.length) return `<b>${en.sets.length}</b> 組 × <b>${rTxt}</b> ${ru} · <span style="color:var(--text3)">未設重量</span>`;
+  const tail=work.some(s=>s.amrap)?'<span style="color:var(--accent)">＋力竭</span>':'';
+  if(!ws.length) return `<b>${work.length}</b> 組 × <b>${rTxt}</b> ${ru} ${tail} · <span style="color:var(--text3)">未設重量</span>`;
   const wTxt=same(ws)?dispW(ws[0]):`${dispW(Math.min(...ws))}–${dispW(Math.max(...ws))}`;
-  return `<b>${en.sets.length}</b> 組 × <b>${rTxt}</b> ${ru} @ <b>${wTxt}</b> ${u()}`;
+  return `<b>${work.length}</b> 組 × <b>${rTxt}</b> ${ru} @ <b>${wTxt}</b> ${u()} ${tail}`;
 }
 
 function renderDay(){
@@ -1239,7 +1275,8 @@ function renderDay(){
   const setsAll=dd.entries.reduce((a,e)=>a+e.sets.length,0);
   const setsDone=dd.entries.reduce((a,e)=>a+e.sets.filter(s=>s.ok).length,0);
   let vol=0;
-  dd.entries.forEach(e=>e.sets.forEach(s=>{ if(s.ok){ const w=s.aw!=null?s.aw:s.w, r=s.ar!=null?s.ar:s.r; if(w&&r) vol+=w*r; }}));
+  // 熱身組不計入訓練總量，否則 40kg×8 的暖身會把數字灌水
+  dd.entries.forEach(e=>e.sets.forEach(s=>{ if(s.ok&&!s.warm){ const w=s.aw!=null?s.aw:s.w, r=s.ar!=null?s.ar:s.r; if(w&&r) vol+=w*r; }}));
 
   let h=`<div class="dayhead">
     <div class="dayttl serif"><span class="wk">${rel||'星期'+WD[d.getDay()]}${rel?' · 星期'+WD[d.getDay()]:''}</span>${d.getMonth()+1} 月 ${d.getDate()} 日</div>
@@ -1316,9 +1353,18 @@ function closeSheet(){
 $('scrim').onclick=closeSheet; $('sheetClose').onclick=closeSheet;
 
 let toastT;
-function toast(msg){
-  const t=$('toast'); t.textContent=msg; t.classList.add('on');
-  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),1900);
+/* 第二個參數可帶一個動作（例如「復原」）。破壞性操作一律要給得回去。 */
+function toast(msg, action){
+  const t=$('toast');
+  clearTimeout(toastT);
+  if(action){
+    t.innerHTML=`<span>${msg}</span><button class="tact">${action.label}</button>`;
+    t.querySelector('.tact').onclick=()=>{ t.classList.remove('on'); action.run(); };
+  } else {
+    t.textContent=msg;
+  }
+  t.classList.add('on');
+  toastT=setTimeout(()=>t.classList.remove('on'), action?5200:1900);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1391,13 +1437,17 @@ function refreshTop(en,e,eid){
 }
 function drawSets(en,e,ru,eid){
   const box=$('sets'); if(!box) return;
+  let n=0;                                  // 正式組的編號，熱身組不佔號
   box.innerHTML=en.sets.map((s,i)=>{
     const w=s.aw!=null?s.aw:s.w, r=s.ar!=null?s.ar:s.r;
-    return `<div class="setrow ${s.ok?'on':''}" data-i="${i}">
-      <span class="setno num">${i+1}</span>
-      <span class="fld"><input type="number" inputmode="decimal" step="0.5" min="0" data-f="w" value="${w!=null?fmt(toU(w),true):''}" placeholder="–" aria-label="第${i+1}組重量"><u>${u()}</u></span>
+    const no=s.warm?'熱':String(++n);
+    // 力竭組沒有目標次數，做完才填實際做到幾下
+    const rPlace=s.amrap?'力竭':'–';
+    return `<div class="setrow ${s.ok?'on':''} ${s.warm?'warm':''} ${s.amrap?'amrap':''}" data-i="${i}">
+      <span class="setno num">${no}</span>
+      <span class="fld"><input type="number" inputmode="decimal" step="0.5" min="0" data-f="w" value="${w!=null?fmt(toU(w),true):''}" placeholder="–" aria-label="第${no}組重量"><u>${u()}</u></span>
       <span class="setx">×</span>
-      <span class="fld"><input type="number" inputmode="numeric" step="1" min="0" data-f="r" value="${r!=null?r:''}" placeholder="–" aria-label="第${i+1}組次數"><u>${ru}</u></span>
+      <span class="fld"><input type="number" inputmode="numeric" step="1" min="0" data-f="r" value="${r!=null?r:''}" placeholder="${rPlace}" aria-label="第${no}組次數"><u>${ru}</u></span>
       <button class="chk" data-a="ok" aria-label="標記完成"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>
       <button class="del" data-a="del" aria-label="刪除這組"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>`;
@@ -1417,7 +1467,12 @@ function drawSets(en,e,ru,eid){
     row.querySelector('[data-a="ok"]').onclick=()=>{
       s.ok=!s.ok;
       if(s.ok){ if(s.aw==null) s.aw=s.w; if(s.ar==null) s.ar=s.r; }
+      const needReps = s.ok && s.amrap && s.ar==null;   // 力竭組沒有目標次數，得問實際做幾下
       save(); drawSets(en,e,ru,eid); refreshTop(en,e,eid); renderAll();
+      if(needReps){
+        const inp=$('sets').querySelector(`.setrow[data-i="${i}"] input[data-f="r"]`);
+        if(inp){ inp.focus(); toast('力竭組請填實際做到幾下'); }
+      }
     };
     row.querySelector('[data-a="del"]').onclick=()=>{
       if(en.sets.length<=1){ toast('至少保留一組'); return; }
@@ -1426,35 +1481,77 @@ function drawSets(en,e,ru,eid){
   });
 }
 
-const MIXES=[
-  {g:'力量',   s:5, r:3,  pct:.88, note:'重量為主，次數低'},
-  {g:'肌力',   s:5, r:5,  pct:.82, note:'經典 5×5'},
-  {g:'增肌',   s:4, r:8,  pct:.75, note:'量與強度平衡'},
-  {g:'代謝',   s:3, r:12, pct:.67, note:'泵感與耐力'},
-  {g:'熱身',   s:2, r:10, pct:.50, note:'正式組前先跑一遍'}
+/* 每個型態是一份「每組獨立」的清單，不是 N 組相同重量。
+   直線組／正金字塔／遞減組要加的話，在這裡多一筆就好，不用動其他地方。 */
+const SCHEMES=[
+  {g:'反向金字塔', s:'最重的先做，逐組減重加次數',
+   sets:[{pct:.85,reps:5},{pct:.78,reps:7},{pct:.72,reps:9}]},
+  {g:'增肌＋力竭', s:'前兩組固定，最後一組做到做不動',
+   sets:[{pct:.72,reps:10},{pct:.72,reps:10},{pct:.65,amrap:true}]}
 ];
+const WARMUP={g:'熱身組', s:'插到最前面，不計入總量與 PR',
+  sets:[{pct:.40,reps:8},{pct:.55,reps:5},{pct:.70,reps:3}]};
+
+const wStep=()=>u()==='kg'?2.5:5;
+// 百分比 → 實際重量（以顯示單位四捨五入到槓片刻度，再轉回 kg 儲存）
+function schemeWeight(e1kg,pct){
+  const st=wStep();
+  return toKg(Math.max(st, Math.round(toU(e1kg)*pct/st)*st));
+}
+function buildSets(spec,e1kg,warm){
+  return spec.map(x=>({
+    w:schemeWeight(e1kg,x.pct), r:x.amrap?null:x.reps,
+    aw:null, ar:null, ok:false,
+    ...(x.amrap?{amrap:true}:{}), ...(warm?{warm:true}:{})
+  }));
+}
+const setLabel=s=>`${dispW(s.w)}${u()}×${s.amrap?'力竭':s.r}`;
+
+/* 已打勾的組是真實訓練紀錄，永遠不動它，只換掉還沒做的。 */
+function applySets(en,e,eid,make,msg){
+  const before=JSON.parse(JSON.stringify(en.sets));
+  make();
+  save(); drawSets(en,e,e.unitReps||'下',eid); refreshTop(en,e,eid); renderAll();
+  toast(msg,{label:'復原',run:()=>{
+    en.sets=before; save(); drawSets(en,e,e.unitReps||'下',eid); refreshTop(en,e,eid); renderAll();
+  }});
+}
+
 function drawMix(en,e,b,eid){
   const box=$('mix'), note=$('mixnote'); if(!box) return;
   if(!b.e1){
-    box.innerHTML=`<div class="mixr" style="display:block"><span class="g">還沒有配重建議</span><br><span class="s">在上面填入重量並打勾任一組，這裡就會依你的 1RM 算出五種搭配</span></div>`;
+    box.innerHTML=`<div class="mixr" style="display:block"><span class="g">還沒有配重建議</span><br>
+      <span class="s">填入重量並打勾任一組，或到動作說明頁設定最大重量，這裡就會算出配重</span></div>`;
     note.textContent='';
     return;
   }
-  const step=u()==='kg'?2.5:5;
-  box.innerHTML=MIXES.map((m,i)=>{
-    const raw=toU(b.e1)*m.pct;
-    const w=Math.max(step,Math.round(raw/step)*step);
-    return `<button class="mixr" data-i="${i}" data-w="${w}" data-s="${m.s}" data-r="${m.r}">
-      <span><span class="g">${m.g}</span><br><span class="s">${m.s} 組 × ${m.r} 下 · ${Math.round(m.pct*100)}%</span></span>
-      <span></span>
-      <span class="w num">${fmt(w,true)}<em>${u()}</em></span></button>`;
+  const rows=SCHEMES.map((m,i)=>{
+    const preview=buildSets(m.sets,b.e1).map(setLabel).join(' · ');
+    return `<button class="mixr" data-i="${i}">
+      <span><span class="g">${m.g}</span><br><span class="s">${m.s}</span>
+      <br><span class="plan num">${preview}</span></span></button>`;
   }).join('');
-  note.innerHTML=`依估算 1RM <b class="num">${dispW(b.e1)} ${u()}</b> 推算，四捨五入到 ${step}${u()}。點一列可直接套用到今日組數。`;
+  const warmPrev=buildSets(WARMUP.sets,b.e1,true).map(setLabel).join(' · ');
+  box.innerHTML=rows+`<button class="mixr" data-warm="1">
+    <span><span class="g">＋ ${WARMUP.g}</span><br><span class="s">${WARMUP.s}</span>
+    <br><span class="plan num">${warmPrev}</span></span></button>`;
+
+  note.innerHTML=`依估算 1RM <b class="num">${dispW(b.e1)} ${u()}</b> 推算，四捨五入到 ${wStep()}${u()}。
+    套用只會換掉<b>還沒打勾</b>的組，已完成的紀錄不動。`;
+
   box.querySelectorAll('.mixr').forEach(btn=>{
     btn.onclick=()=>{
-      const w=toKg(parseFloat(btn.dataset.w)), ns=+btn.dataset.s, nr=+btn.dataset.r;
-      en.sets=Array.from({length:ns},()=>({w,r:nr,aw:null,ar:null,ok:false}));
-      save(); drawSets(en,e,e.unitReps||'下',eid); renderAll(); toast('已套用配重');
+      if(btn.dataset.warm){
+        applySets(en,e,eid,()=>{
+          en.sets=buildSets(WARMUP.sets,b.e1,true).concat(en.sets.filter(s=>!s.warm));
+        },'已插入熱身組');
+        return;
+      }
+      const m=SCHEMES[+btn.dataset.i];
+      applySets(en,e,eid,()=>{
+        const keep=en.sets.filter(s=>s.ok);
+        en.sets=keep.concat(buildSets(m.sets,b.e1));
+      },`已套用${m.g}`);
     };
   });
 }
@@ -1471,6 +1568,7 @@ function drawRest(en){
 function openIntro(exId,backTo){
   const e=BYID[exId]; if(!e) return;
   const b=bestOf(exId);
+  const mmCur=S.manualMax[exId];
   const mus=ids=>ids.map(id=>M[id]?M[id][0]:id);
 
   const html=`
@@ -1524,7 +1622,8 @@ function openIntro(exId,backTo){
       <div class="prcell"><div class="k">估算 1RM</div><div class="v num">${dispW(b.e1)}<em>${u()}</em></div></div>
       <div class="lastlog"><span style="color:var(--text3)">${b.wd?`達成於 ${b.wd}`:(b.w?'手動設定':'還沒有紀錄，練完打勾就會出現')}</span></div>
     </div>
-    <button class="addset" id="setMax" style="margin-top:8px">手動設定最大重量</button>
+    <button class="addset" id="setMax" style="margin-top:8px">${mmCur?'修改手動設定的最大重量':'手動設定最大重量'}</button>
+    <div id="maxBox"></div>
   </div>`;
 
   const foot=backTo
@@ -1535,15 +1634,70 @@ function openIntro(exId,backTo){
     $('closeIntro').onclick=closeSheet;
     if(backTo){ $('backDetail').onclick=()=>openDetail(backTo); }
     else { $('addFromIntro').onclick=()=>{ addToDay([exId]); closeSheet(); }; }
-    $('setMax').onclick=()=>{
-      const cur=b.w?fmt(toU(b.w),true):'';
-      const v=prompt(`設定「${e.n}」的最大重量（${u()}）`,cur);
-      if(v==null) return;
-      const n=parseFloat(v);
-      if(!isFinite(n)||n<=0){ delete S.manualMax[exId]; } else { S.manualMax[exId]=toKg(n); }
-      save(); openIntro(exId,backTo); renderAll(); toast('已更新最大重量');
-    };
+    $('setMax').onclick=()=>drawMaxForm(exId,e,backTo);
   });
+}
+
+/* 手動設定最大重量。多數人知道「80 公斤能做 5 下」，卻不知道自己真正的 1RM，
+   而且單次極限測試有風險 —— 所以預設收「重量 × 次數」再換算，也允許直接填 1RM。 */
+function drawMaxForm(exId,e,backTo){
+  const box=$('maxBox'); if(!box) return;
+  const cur=S.manualMax[exId]||{};
+  box.innerHTML=`
+    <div class="maxform">
+      <div class="restrow" style="margin-bottom:9px">
+        <button class="pill on" data-mode="reps">重量 × 次數</button>
+        <button class="pill" data-mode="orm">直接填 1RM</button>
+      </div>
+      <div class="maxrow">
+        <span class="fld"><input type="number" inputmode="decimal" step="0.5" min="0" id="mxW"
+          value="${cur.w?fmt(toU(cur.w),true):''}" placeholder="–" aria-label="重量"><u>${u()}</u></span>
+        <span class="setx" id="mxX">×</span>
+        <span class="fld" id="mxRwrap"><input type="number" inputmode="numeric" step="1" min="1" max="12" id="mxR"
+          value="${cur.r||''}" placeholder="–" aria-label="次數"><u>下</u></span>
+      </div>
+      <div class="mixnote" id="mxOut"></div>
+      <div class="restrow" style="margin-top:10px">
+        <button class="btn pri" id="mxSave">儲存</button>
+        ${cur.w?`<button class="btn dgr" id="mxDel">清除</button>`:''}
+        <button class="btn gho" id="mxCancel">取消</button>
+      </div>
+    </div>`;
+
+  let mode = (cur.r===1||!cur.w) && cur.r===1 ? 'orm' : 'reps';
+  const setMode=m=>{
+    mode=m;
+    box.querySelectorAll('[data-mode]').forEach(p=>p.classList.toggle('on',p.dataset.mode===m));
+    $('mxX').style.visibility = m==='orm'?'hidden':'visible';
+    $('mxRwrap').style.visibility = m==='orm'?'hidden':'visible';
+    calc();
+  };
+  function calc(){
+    const w=parseFloat($('mxW').value), r=mode==='orm'?1:parseInt($('mxR').value,10);
+    const out=$('mxOut');
+    if(!isFinite(w)||w<=0){ out.textContent='填入重量後這裡會顯示換算結果。'; return; }
+    if(mode!=='orm'&&(!isFinite(r)||r<1)){ out.textContent='再填次數就會換算成 1RM。'; return; }
+    const rr=Math.min(mode==='orm'?1:r, E1_MAX_REPS);
+    const e1=epley(toKg(w),rr);
+    out.innerHTML = mode==='orm'
+      ? `直接以 <b class="num">${fmt(w,true)} ${u()}</b> 當作 1RM。`
+      : `<b class="num">${fmt(w,true)} ${u()} × ${r} 下</b> → 估算 1RM <b class="num">${dispW(e1)} ${u()}</b>`
+        + (r>E1_MAX_REPS?`<br><span style="color:var(--warnText)">次數超過 ${E1_MAX_REPS} 下的換算會嚴重高估，已以 ${E1_MAX_REPS} 下計算。</span>`:'');
+  }
+  box.querySelectorAll('[data-mode]').forEach(p=>p.onclick=()=>setMode(p.dataset.mode));
+  $('mxW').oninput=calc; $('mxR').oninput=calc;
+  $('mxSave').onclick=()=>{
+    const w=parseFloat($('mxW').value), r=mode==='orm'?1:parseInt($('mxR').value,10);
+    if(!isFinite(w)||w<=0){ toast('請填入重量'); return; }
+    if(mode!=='orm'&&(!isFinite(r)||r<1)){ toast('請填入次數'); return; }
+    S.manualMax[exId]={w:toKg(w), r:mode==='orm'?1:r};
+    save(); openIntro(exId,backTo); renderAll(); toast('已更新最大重量');
+  };
+  const del=$('mxDel');
+  if(del) del.onclick=()=>{ delete S.manualMax[exId]; save(); openIntro(exId,backTo); renderAll(); toast('已清除手動設定'); };
+  $('mxCancel').onclick=()=>{ box.innerHTML=''; };
+  setMode(mode);
+  $('mxW').focus();
 }
 
 /* ═══════════════════════════════════════════════════════
