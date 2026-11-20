@@ -611,6 +611,46 @@ const DB = [
     eq:['step'], ar:[{at:'hip',d:[0,-1],l:20},{at:'footR',d:[0,-1],l:14}]},
  d:[4,15,45]},
 
+{id:'hipthrust', n:'槓鈴髖推', en:'Barbell Hip Thrust', part:'legs', eq:'barbell',
+ pri:['glu'], sec:['ham','quad'], force:'髖伸直',
+ fn:'上背靠在凳緣，槓放在髖部，用臀部把髖關節頂到完全伸直。',
+ cues:['下巴微收看向前下方，避免過度後仰','頂端夾緊臀部停一拍，髖關節完全打開','腳跟踩地發力，不是用腳尖頂','肩胛骨頂住凳緣，身體不要前後滑動'],
+ bad:['靠下背過度伸展代償，不是臀部出力','頂端沒有真正夾緊，幅度只做一半'],
+ br:'下放吸氣，頂起吐氣',
+ f:{v:'side', p:P({torso:-90, sh:[64,80], el:[58,86], hip:[86,94], kn:[-3,3], dy:-4, s:.92}),
+    eq:['thrustBench','barHip'], ar:[{at:'hip',d:[0,-1],l:20}]},
+ d:[4,10,120]},
+
+{id:'splitsquat', n:'啞鈴分腿蹲', en:'Split Squat', part:'legs', eq:'dumbbell',
+ pri:['quad','glu'], sec:['ham','add'], force:'單腳垂直推',
+ fn:'前後腳都踩在地面，前腳在前方跨步蹲下再站起，重心主要落在前腳。',
+ cues:['前腳跨出到蹲下時膝蓋不過度前頂','後腳腳跟自然抬起，用前腳掌撐地','上身維持直立，核心收緊','蹲到前大腿接近水平再站起'],
+ bad:['步距太小讓膝蓋壓力過大','蹲下時前膝內夾'],
+ br:'下蹲吸氣，起身吐氣',
+ f:{v:'front', p:P({torso:182, sh:[-46,46], el:[-8,8], hip:[-38,40], kn:[24,102], dy:-4, s:.88}),
+    eq:['db'], ar:[{at:'hip',d:[0,-1],l:22}]},
+ d:[3,10,90]},
+
+{id:'hipabduction', n:'髖外展機', en:'Hip Abduction Machine', part:'legs', eq:'machine',
+ pri:['glu'], sec:[], force:'髖外展',
+ fn:'坐姿把大腿往外側打開，對抗機器阻力墊的夾角。',
+ cues:['上背靠穩椅背，身體不要前傾借力','外展到最大角度停一拍再回','回程控制速度，不要讓阻力把腿彈回','全程保持骨盆穩定不晃動'],
+ bad:['身體前傾用上半身重量代償','速度太快變成甩腿'],
+ br:'外展吐氣，回位吸氣',
+ f:{v:'front', p:P({torso:180, sh:[-20,20], el:[-26,26], hip:[-116,116], kn:[-6,6], dy:8, s:.84}),
+    eq:['seatBack','pad'], ar:[{at:'kneeL',d:[-.9,-.44],l:18,c:-4},{at:'kneeR',d:[.9,-.44],l:18,c:4}]},
+ d:[3,15,60]},
+
+{id:'glutekickback', n:'臀推後踢', en:'Glute Kickback', part:'legs', eq:'machine',
+ pri:['glu'], sec:['ham'], force:'髖伸直（單腳）',
+ fn:'站姿扶穩機台，單腳往後踢把髖關節伸直，對抗滑輪阻力。',
+ cues:['核心收緊，骨盆不要跟著轉動','動作來自髖關節，不是靠腰部甩','往後踢到最高點停一拍再回','膝蓋角度全程固定不要打直甩動'],
+ bad:['用下背代償，腰部跟著拱起','靠甩動的慣性而不是臀部出力'],
+ br:'後踢吐氣，回位吸氣',
+ f:{v:'side', p:P({torso:198, sh:[6,-6], el:[6,-6], hip:[6,154], kn:[2,160], dy:0, s:.88}),
+    eq:['cableAnkle'], ar:[{at:'footR',d:[-.4,-.9],l:18,c:-6}]},
+ d:[3,15,60]},
+
 /* ── 肩 ───────────────────────────────────────────── */
 {id:'ohp', n:'站姿肩推', en:'Overhead Press', part:'shoulders', eq:'barbell',
  pri:['del','sdel'], sec:['tri','tra','abs'], force:'垂直推',
@@ -961,6 +1001,18 @@ function gear(kind,j){
     case 'cableTop': { const an={x:hm.x,y:10}; line(an,hm,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
     case 'cableTopShort': { const an={x:hm.x,y:12}; line(an,hm,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
     case 'cableLowFront': { const an={x:14,y:hm.y+10}; line(an,hm,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
+    case 'cableAnkle': { const an={x:86,y:134}; line(an,j.footR,1.4,'cab'); g.push(`<circle class="eqf" cx="${an.x}" cy="${an.y}" r="3.4"/>`); break; }
+    case 'barHip': bar({x:j.hip.x,y:j.hip.y-2},27*s); break;
+    case 'thrustBench': {
+      // 髖推的凳子只墊肩頸附近，不是躺整條背 —— 跟 'bench' 的差異就在這裡。
+      // flip 判斷沿用 'bench' 的寫法（用 pelvis 當參考點），只是把支撐點從
+      // pelvis-to-neck 整段改成只在 neck 附近給一小截。
+      const td=j._td, n={x:-td.y,y:td.x};
+      const flip=((j.bar.x-j.pelvis.x)*n.x+(j.bar.y-j.pelvis.y)*n.y)>0?-1:1;
+      const c=add(j.neck,n,11*s*flip);
+      line(add(c,td,-9*s), add(c,td,9*s), 7,'eqf2');
+      break;
+    }
   }
   return g.join('');
 }
@@ -1107,7 +1159,9 @@ const WD=['日','一','二','三','四','五','六'];
 const TPL_SEED=[
   {name:'推日 · 胸肩三頭', accent:'#D98B45', ids:['bench','inclinedb','ohp','lateral','pushdown']},
   {name:'拉日 · 背二頭',   accent:'#5D91AA', ids:['deadlift','pullup','row','facepull','bbcurl']},
-  {name:'腿日 · 下肢',     accent:'#7E9B5A', ids:['squat','rdl','legpress','lunge','calfraise','plank']}
+  {name:'腿日 · 下肢',     accent:'#7E9B5A', ids:['squat','rdl','legpress','lunge','calfraise','plank']},
+  {name:'Full Body A',    accent:'#C4655C', ids:['hipthrust','splitsquat','latpulldown','bench','lateral','hipabduction']},
+  {name:'Full Body B',    accent:'#9B7FB8', ids:['rdl','squat','cablerow','lateral','facepull','glutekickback']}
 ];
 function mkEntry(exId){
   const e=BYID[exId]; if(!e) return null;
@@ -1139,6 +1193,9 @@ function load(){
       if(!S.manualMax[k]||!(S.manualMax[k].w>0)) delete S.manualMax[k];
     }
     S.custom.forEach(c=>{ if(!BYID[c.id]) { DB.push(c); BYID[c.id]=c; } });
+    // 新增的課表範本（例如 Full Body A/B）補進既有存檔，用名字比對、不動使用者已有的範本
+    const haveNames=new Set(S.templates.map(t=>t.name));
+    TPL_SEED.forEach(t=>{ if(!haveNames.has(t.name)) S.templates.push(mkTemplate(t)); });
     if(recovered) save();   // 把回復後的內容寫回主檔，別讓壞掉的主檔留著
   }
 }

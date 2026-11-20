@@ -412,6 +412,44 @@ and stretched.`
 the lower foot. The elbow is directly beneath the shoulder, the hips are pushed up so head, shoulder, hip and ankle
 form one straight diagonal line, the upper arm resting along the side of the body.
 Target muscle: the oblique muscles down the side of the waist facing the floor.`
+  },
+
+  // ── 新增：髖／臀 ──────────────────────────────────────
+  hipthrust: {
+    file: 'hipthrust.png',
+    what: 'a barbell hip thrust at the top of the lockout',
+    detail: `Pure side view. The athlete's upper back and shoulder blades rest against the edge of a short flat bench
+behind them, feet planted flat on the floor in front with knees bent to roughly 90 degrees. At the top of the
+movement the hips are driven fully up so the body forms one straight diagonal line from shoulders through hips to
+knees — the hips are the highest point of the silhouette, clearly above the shoulder. A loaded olympic barbell rests
+across the crease of the hips, held in place by both hands gripping it from above. Target muscle: the glutes,
+fully contracted at the top.`
+  },
+  splitsquat: {
+    file: 'splitsquat.png',
+    what: 'a dumbbell split squat at the bottom position, both feet flat on the floor',
+    detail: `Three-quarter side view. The athlete stands in a long front-to-back stance with BOTH feet flat on the
+level floor — unlike a rear-foot-elevated split squat, the back foot is NOT raised on anything. The front knee is
+bent to about 90 degrees with the shin close to vertical, the back knee bent and lowered toward the floor, torso
+upright and tall. A dumbbell hangs straight down in each hand at the sides. Target muscles: the quadriceps and
+glute of the front leg.`
+  },
+  hipabduction: {
+    file: 'hipabduction.png',
+    what: 'a seated hip abduction machine at the open (abducted) position',
+    detail: `Front view. The athlete sits upright in a hip abduction machine, back against the pad, both hands
+gripping the side handles for stability. Both knees press outward against padded levers, thighs spread wide open
+to the sides at the top of the movement. Feet rest on a low footplate close together, knees spread apart.
+Target muscle: the glutes (hip abductors), shown on the outside of both hips.`
+  },
+  glutekickback: {
+    file: 'glutekickback.png',
+    what: 'a standing cable glute kickback at the top of the kick',
+    detail: `Pure side view. The athlete stands facing a low cable machine, leaning forward slightly and holding
+the machine frame with both hands for balance. The standing leg (nearest the machine) is straight and vertical,
+planted on the floor. The other leg, with an ankle cuff attached to a low cable pulley behind it, is extended
+straight backward and lifted up behind the body to about hip height — clearly raised off the floor, kicked
+backward and up, not left hanging down. Target muscle: the glute of the kicking leg, fully contracted.`
   }
 };
 
